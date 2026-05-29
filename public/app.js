@@ -1,88 +1,120 @@
 const messagesEl = document.getElementById('messages');
+const welcomeWrapper = document.getElementById('welcomeWrapper');
+const chatContainer = document.getElementById('chatContainer');
+const chatHeader = document.getElementById('chatHeader');
+const inputArea = document.getElementById('inputArea');
+const chatTitleText = document.getElementById('chatTitleText');
+
+// Welcome input
 const messageInput = document.getElementById('messageInput');
 const sendBtn = document.getElementById('sendBtn');
+
+// Conversation input
+const messageInputBottom = document.getElementById('messageInputBottom');
+const sendBtnBottom = document.getElementById('sendBtnBottom');
+
 const newChatBtn = document.getElementById('newChatBtn');
-const welcomeEl = document.getElementById('welcome');
-const suggestionsEl = document.getElementById('suggestions');
-const chatTitleText = document.getElementById('chatTitleText');
 
 let conversationHistory = [];
 let isWaiting = false;
-let firstMessage = true;
+let inConversation = false;
 
-// Auto-resize textarea
-messageInput.addEventListener('input', () => {
-  messageInput.style.height = 'auto';
-  messageInput.style.height = Math.min(messageInput.scrollHeight, 200) + 'px';
-  sendBtn.disabled = !messageInput.value.trim();
+// Get active input
+function getActiveInput() {
+  return inConversation ? messageInputBottom : messageInput;
+}
+
+function getActiveSendBtn() {
+  return inConversation ? sendBtnBottom : sendBtn;
+}
+
+// Auto-resize for both textareas
+[messageInput, messageInputBottom].forEach(input => {
+  input.addEventListener('input', () => {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 200) + 'px';
+    const btn = input === messageInput ? sendBtn : sendBtnBottom;
+    btn.disabled = !input.value.trim();
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (input.value.trim() && !isWaiting) {
+        sendMessage(input.value.trim());
+        input.value = '';
+        input.style.height = 'auto';
+      }
+    }
+  });
 });
 
-// Send on Enter (Shift+Enter for newline)
-messageInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    if (messageInput.value.trim() && !isWaiting) {
-      sendMessage();
-    }
+// Send buttons
+sendBtn.addEventListener('click', () => {
+  if (messageInput.value.trim() && !isWaiting) {
+    sendMessage(messageInput.value.trim());
+    messageInput.value = '';
+    messageInput.style.height = 'auto';
+    sendBtn.disabled = true;
   }
 });
 
-sendBtn.addEventListener('click', () => {
-  if (messageInput.value.trim() && !isWaiting) {
-    sendMessage();
+sendBtnBottom.addEventListener('click', () => {
+  if (messageInputBottom.value.trim() && !isWaiting) {
+    sendMessage(messageInputBottom.value.trim());
+    messageInputBottom.value = '';
+    messageInputBottom.style.height = 'auto';
+    sendBtnBottom.disabled = true;
   }
 });
 
 // Suggestion chips
 document.querySelectorAll('.suggestion-chip').forEach(chip => {
   chip.addEventListener('click', () => {
-    messageInput.value = chip.dataset.message;
-    sendBtn.disabled = false;
-    sendMessage();
+    sendMessage(chip.dataset.message);
   });
 });
 
 // New chat
 newChatBtn.addEventListener('click', () => {
   conversationHistory = [];
-  firstMessage = true;
+  inConversation = false;
   messagesEl.textContent = '';
-  messagesEl.appendChild(welcomeEl);
-  welcomeEl.style.display = 'flex';
-  suggestionsEl.style.display = 'flex';
-  chatTitleText.textContent = 'New chat';
+  welcomeWrapper.classList.remove('hidden');
+  chatContainer.classList.remove('visible');
+  chatHeader.classList.remove('visible');
+  inputArea.classList.remove('visible');
   messageInput.value = '';
   messageInput.placeholder = 'How can I help you today?';
   sendBtn.disabled = true;
+  messageInput.focus();
 });
 
-async function sendMessage() {
-  const message = messageInput.value.trim();
+function switchToConversation(firstMsg) {
+  inConversation = true;
+  welcomeWrapper.classList.add('hidden');
+  chatContainer.classList.add('visible');
+  chatHeader.classList.add('visible');
+  inputArea.classList.add('visible');
+  chatTitleText.textContent = firstMsg.length > 35 ? firstMsg.substring(0, 32) + '...' : firstMsg;
+  messageInputBottom.focus();
+}
+
+async function sendMessage(message) {
   if (!message || isWaiting) return;
 
-  // Hide welcome and suggestions
-  if (welcomeEl) {
-    welcomeEl.style.display = 'none';
-  }
-  if (suggestionsEl) {
-    suggestionsEl.style.display = 'none';
-  }
-
-  // Update title and placeholder on first message
-  if (firstMessage) {
-    chatTitleText.textContent = message.length > 35 ? message.substring(0, 32) + '...' : message;
-    messageInput.placeholder = 'Write a message...';
-    firstMessage = false;
+  // Switch to conversation mode on first message
+  if (!inConversation) {
+    switchToConversation(message);
   }
 
   // Add user message to UI
   appendUserMessage(message);
   conversationHistory.push({ role: 'user', content: message });
 
-  // Clear input
-  messageInput.value = '';
-  messageInput.style.height = 'auto';
+  // Disable send
   sendBtn.disabled = true;
+  sendBtnBottom.disabled = true;
   isWaiting = true;
 
   // Show thinking indicator
@@ -99,8 +131,6 @@ async function sendMessage() {
     });
 
     const data = await response.json();
-
-    // Remove thinking indicator
     thinkingEl.remove();
 
     if (data.error) {
@@ -115,7 +145,7 @@ async function sendMessage() {
     }
   } catch (err) {
     thinkingEl.remove();
-    appendAssistantMessage('I apologize, but I\'m having trouble connecting to the server. Please check your connection and try again.');
+    appendAssistantMessage('I apologize, but I\'m having trouble connecting. Please try again.');
   }
 
   isWaiting = false;
@@ -139,7 +169,6 @@ function appendAssistantMessage(content, actions) {
   const messageEl = document.createElement('div');
   messageEl.className = 'message assistant-message';
 
-  // Content
   const contentEl = document.createElement('div');
   contentEl.className = 'message-content';
   renderFormattedContent(contentEl, content);
@@ -163,20 +192,10 @@ function appendAssistantMessage(content, actions) {
   // Reaction icons
   const reactions = document.createElement('div');
   reactions.className = 'message-reactions';
-  const icons = ['copy', 'thumbsup', 'thumbsdown', 'retry'];
-  const svgs = {
-    copy: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
-    thumbsup: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>',
-    thumbsdown: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/></svg>',
-    retry: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>'
-  };
-  icons.forEach(icon => {
+  ['\u2398', '\uD83D\uDC4D', '\uD83D\uDC4E', '\u21BB'].forEach(icon => {
     const btn = document.createElement('button');
     btn.className = 'reaction-btn';
-    btn.title = icon;
-    // Use a text fallback since we can't use innerHTML
-    btn.textContent = icon === 'copy' ? '\u2398' : icon === 'thumbsup' ? '\u{1F44D}' : icon === 'thumbsdown' ? '\u{1F44E}' : '\u21BB';
-    btn.style.fontSize = '12px';
+    btn.textContent = icon;
     reactions.appendChild(btn);
   });
   messageEl.appendChild(reactions);
@@ -185,15 +204,10 @@ function appendAssistantMessage(content, actions) {
   scrollToBottom();
 }
 
-/**
- * Renders formatted text content safely using DOM APIs.
- * Supports **bold**, bullet lists, and paragraph splitting.
- */
 function renderFormattedContent(container, text) {
   const paragraphs = text.split('\n\n').map(p => p.trim()).filter(Boolean);
 
   paragraphs.forEach(paraText => {
-    // Check if this is a bullet list
     const lines = paraText.split('\n');
     const isList = lines.every(l => l.trim().startsWith('- ') || l.trim().startsWith('\u2022 ') || l.trim() === '');
 
@@ -217,7 +231,6 @@ function renderFormattedContent(container, text) {
 }
 
 function renderInline(element, text) {
-  // Split by **bold** markers
   const parts = text.split(/(\*\*[^*]+\*\*)/g);
   parts.forEach(part => {
     if (part.startsWith('**') && part.endsWith('**')) {
@@ -225,7 +238,6 @@ function renderInline(element, text) {
       strong.textContent = part.slice(2, -2);
       element.appendChild(strong);
     } else {
-      // Handle line breaks
       const lines = part.split('\n');
       lines.forEach((line, i) => {
         element.appendChild(document.createTextNode(line));
@@ -240,7 +252,6 @@ function renderInline(element, text) {
 function showThinking() {
   const el = document.createElement('div');
   el.className = 'thinking-indicator';
-  // Coral sparkle SVG as thinking indicator
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('width', '24');
   svg.setAttribute('height', '24');
@@ -259,6 +270,5 @@ function showThinking() {
 }
 
 function scrollToBottom() {
-  const container = document.querySelector('.chat-container');
-  container.scrollTop = container.scrollHeight;
+  chatContainer.scrollTop = chatContainer.scrollHeight;
 }
