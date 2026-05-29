@@ -1,0 +1,20 @@
+{
+  "name": "anthropic-sf-demo",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Claude-to-Salesforce Customer Service Demo - headless AI integration with real Salesforce records",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "node-fetch": "^2.7.0"
+  }
+}
