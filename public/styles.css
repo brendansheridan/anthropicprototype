@@ -49,6 +49,19 @@ html, body {
   gap: 6px;
 }
 
+.sidebar-logo {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.sidebar-logo img {
+  border-radius: 6px;
+}
+
 .sidebar-bottom {
   display: flex;
   flex-direction: column;
