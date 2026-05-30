@@ -101,9 +101,41 @@ const SCRIPT = [
     }
   },
   {
-    user: "Thanks! Can you also show me how to rotate my API keys?",
-    agent: "Absolutely! You can rotate your API keys from the **API Settings** page. I\u2019d recommend creating a new key first, updating your environment variables, verifying everything works, then revoking the old key. Would you like me to walk you through that step by step, or open the API Settings page for you?",
-    card: null
+    user: "I also need to rotate my API keys. Can you help with that?",
+    agent: "Of course! I can rotate your key right here. Your current key is shown below \u2014 click **Generate New Key** and I\u2019ll create a fresh one instantly. Make sure to copy it before navigating away.",
+    card: {
+      type: 'api_key_rotation',
+      data: {
+        currentKey: 'sk-ant-api03-****************************7f2x',
+        keyName: 'Production — main app',
+        created: 'Mar 12, 2026',
+        lastUsed: '2 minutes ago'
+      }
+    }
+  },
+  {
+    user: "I'd also like to set up a spending alert so I don't get surprised on my bill.",
+    agent: "Smart move! You can configure a spend alert threshold below. When your usage crosses that amount in a billing period, we\u2019ll notify you via email and Slack webhook.",
+    card: {
+      type: 'spend_alert',
+      data: {
+        currentSpend: 487.32,
+        budget: 1499,
+        suggestedThreshold: 1200
+      }
+    }
+  },
+  {
+    user: "One more thing — can I quickly test the latency on my new plan?",
+    agent: "Absolutely! Here\u2019s a quick model playground. Hit **Run Test** to send a sample prompt and see your new latency and token throughput in real time.",
+    card: {
+      type: 'model_playground',
+      data: {
+        model: 'claude-sonnet-4-6',
+        samplePrompt: 'Explain the difference between REST and GraphQL in one sentence.',
+        estimatedTokens: 42
+      }
+    }
   }
 ];
 
@@ -273,6 +305,9 @@ function renderCard(card) {
     case 'api_usage': return renderUsageCard(card.data);
     case 'plan_comparison': return renderPlanCard(card.data);
     case 'upgrade_confirmation': return renderConfirmCard(card.data);
+    case 'api_key_rotation': return renderAPIKeyCard(card.data);
+    case 'spend_alert': return renderSpendAlertCard(card.data);
+    case 'model_playground': return renderPlaygroundCard(card.data);
     default: return null;
   }
 }
@@ -533,6 +568,293 @@ function renderConfirmCard(data) {
   card.appendChild(header);
   card.appendChild(body);
   return card;
+}
+
+// === Interactive Card: API Key Rotation ===
+function renderAPIKeyCard(data) {
+  const card = document.createElement('div');
+  card.className = 'card';
+
+  const header = document.createElement('div');
+  header.className = 'card-header';
+  const title = document.createElement('span');
+  title.className = 'card-title';
+  title.textContent = 'API Key Management';
+  const badge = document.createElement('span');
+  badge.className = 'card-badge badge-active';
+  badge.textContent = 'Active';
+  header.appendChild(title);
+  header.appendChild(badge);
+
+  const body = document.createElement('div');
+  body.className = 'card-body';
+
+  // Current key display
+  const keyInfo = document.createElement('div');
+  keyInfo.className = 'key-info';
+
+  const keyLabel = document.createElement('div');
+  keyLabel.className = 'billing-label';
+  keyLabel.textContent = data.keyName;
+
+  const keyValue = document.createElement('div');
+  keyValue.className = 'key-value';
+  keyValue.textContent = data.currentKey;
+
+  const keyMeta = document.createElement('div');
+  keyMeta.className = 'key-meta';
+  keyMeta.textContent = 'Created ' + data.created + ' \u00B7 Last used ' + data.lastUsed;
+
+  keyInfo.appendChild(keyLabel);
+  keyInfo.appendChild(keyValue);
+  keyInfo.appendChild(keyMeta);
+  body.appendChild(keyInfo);
+
+  // Generate button
+  const btn = document.createElement('button');
+  btn.className = 'upgrade-btn';
+  btn.textContent = 'Generate New Key';
+  btn.addEventListener('click', () => {
+    btn.disabled = true;
+    btn.textContent = 'Generating...';
+    setTimeout(() => {
+      // Generate a realistic-looking key
+      const newKey = 'sk-ant-api03-' + generateRandomKey(48);
+      keyValue.textContent = newKey;
+      keyValue.classList.add('key-new');
+      keyMeta.textContent = 'Created just now \u00B7 Never used';
+      badge.textContent = 'Rotated';
+      badge.className = 'card-badge badge-success';
+      btn.textContent = 'Copy New Key';
+      btn.disabled = false;
+      btn.addEventListener('click', () => {
+        navigator.clipboard.writeText(newKey).catch(() => {});
+        btn.textContent = 'Copied!';
+        btn.disabled = true;
+      }, { once: true });
+
+      // Warning
+      const warning = document.createElement('div');
+      warning.className = 'key-warning';
+      warning.textContent = '\u26A0\uFE0F Your old key has been revoked. Update your environment variables.';
+      body.appendChild(warning);
+    }, 1200);
+  });
+  body.appendChild(btn);
+
+  card.appendChild(header);
+  card.appendChild(body);
+  return card;
+}
+
+// === Interactive Card: Spend Alert ===
+function renderSpendAlertCard(data) {
+  const card = document.createElement('div');
+  card.className = 'card';
+
+  const header = document.createElement('div');
+  header.className = 'card-header';
+  const title = document.createElement('span');
+  title.className = 'card-title';
+  title.textContent = 'Spend Alert Configuration';
+  const badge = document.createElement('span');
+  badge.className = 'card-badge badge-info';
+  badge.textContent = 'Configure';
+  header.appendChild(title);
+  header.appendChild(badge);
+
+  const body = document.createElement('div');
+  body.className = 'card-body';
+
+  // Current spend indicator
+  const spendRow = document.createElement('div');
+  spendRow.className = 'spend-row';
+  const spendLabel = document.createElement('span');
+  spendLabel.className = 'billing-label';
+  spendLabel.textContent = 'Current period spend';
+  const spendValue = document.createElement('span');
+  spendValue.className = 'billing-value';
+  spendValue.textContent = '$' + data.currentSpend.toFixed(2) + ' / $' + data.budget;
+  spendRow.appendChild(spendLabel);
+  spendRow.appendChild(spendValue);
+  body.appendChild(spendRow);
+
+  // Threshold slider
+  const sliderGroup = document.createElement('div');
+  sliderGroup.className = 'slider-group';
+
+  const sliderLabel = document.createElement('div');
+  sliderLabel.className = 'slider-label';
+  sliderLabel.textContent = 'Alert threshold: $' + data.suggestedThreshold;
+
+  const slider = document.createElement('input');
+  slider.type = 'range';
+  slider.min = '100';
+  slider.max = String(data.budget);
+  slider.value = String(data.suggestedThreshold);
+  slider.className = 'threshold-slider';
+
+  slider.addEventListener('input', () => {
+    sliderLabel.textContent = 'Alert threshold: $' + slider.value;
+  });
+
+  sliderGroup.appendChild(sliderLabel);
+  sliderGroup.appendChild(slider);
+  body.appendChild(sliderGroup);
+
+  // Notification channels
+  const channels = document.createElement('div');
+  channels.className = 'alert-channels';
+  const channelsLabel = document.createElement('div');
+  channelsLabel.className = 'billing-label';
+  channelsLabel.textContent = 'Notify via:';
+  channels.appendChild(channelsLabel);
+
+  const channelOpts = document.createElement('div');
+  channelOpts.className = 'channel-options';
+  ['Email', 'Slack Webhook', 'SMS'].forEach(ch => {
+    const label = document.createElement('label');
+    label.className = 'channel-toggle';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = ch !== 'SMS';
+    const span = document.createElement('span');
+    span.textContent = ch;
+    label.appendChild(cb);
+    label.appendChild(span);
+    channelOpts.appendChild(label);
+  });
+  channels.appendChild(channelOpts);
+  body.appendChild(channels);
+
+  // Save button
+  const btn = document.createElement('button');
+  btn.className = 'upgrade-btn';
+  btn.textContent = 'Save Alert';
+  btn.addEventListener('click', () => {
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+    setTimeout(() => {
+      btn.textContent = '\u2713 Alert Configured';
+      badge.textContent = 'Active';
+      badge.className = 'card-badge badge-success';
+    }, 800);
+  });
+  body.appendChild(btn);
+
+  card.appendChild(header);
+  card.appendChild(body);
+  return card;
+}
+
+// === Interactive Card: Model Playground ===
+function renderPlaygroundCard(data) {
+  const card = document.createElement('div');
+  card.className = 'card';
+
+  const header = document.createElement('div');
+  header.className = 'card-header';
+  const title = document.createElement('span');
+  title.className = 'card-title';
+  title.textContent = 'Model Playground';
+  const badge = document.createElement('span');
+  badge.className = 'card-badge badge-active';
+  badge.textContent = data.model;
+  header.appendChild(title);
+  header.appendChild(badge);
+
+  const body = document.createElement('div');
+  body.className = 'card-body';
+
+  // Prompt display
+  const promptGroup = document.createElement('div');
+  promptGroup.className = 'playground-prompt';
+  const promptLabel = document.createElement('div');
+  promptLabel.className = 'billing-label';
+  promptLabel.textContent = 'Test Prompt';
+  const promptText = document.createElement('div');
+  promptText.className = 'prompt-text';
+  promptText.textContent = data.samplePrompt;
+  promptGroup.appendChild(promptLabel);
+  promptGroup.appendChild(promptText);
+  body.appendChild(promptGroup);
+
+  // Results area (hidden initially)
+  const results = document.createElement('div');
+  results.className = 'playground-results';
+  results.style.display = 'none';
+  body.appendChild(results);
+
+  // Run button
+  const btn = document.createElement('button');
+  btn.className = 'upgrade-btn';
+  btn.textContent = 'Run Test';
+  btn.addEventListener('click', () => {
+    btn.disabled = true;
+    btn.textContent = 'Running...';
+
+    // Simulate latency
+    const startTime = Date.now();
+    setTimeout(() => {
+      const latency = (180 + Math.random() * 120).toFixed(0);
+      const tokens = 38 + Math.floor(Math.random() * 15);
+      const tokensPerSec = (tokens / (parseInt(latency) / 1000)).toFixed(1);
+
+      results.style.display = 'block';
+
+      // Response text
+      const responseLabel = document.createElement('div');
+      responseLabel.className = 'billing-label';
+      responseLabel.textContent = 'Response';
+      const responseText = document.createElement('div');
+      responseText.className = 'playground-response';
+      responseText.textContent = 'REST is a resource-based architectural style using standard HTTP methods, while GraphQL is a query language that lets clients request exactly the data they need in a single endpoint.';
+
+      // Stats
+      const statsRow = document.createElement('div');
+      statsRow.className = 'playground-stats';
+      [
+        { label: 'Latency', value: latency + 'ms' },
+        { label: 'Output Tokens', value: String(tokens) },
+        { label: 'Throughput', value: tokensPerSec + ' tok/s' }
+      ].forEach(s => {
+        const stat = document.createElement('div');
+        stat.className = 'playground-stat';
+        const val = document.createElement('div');
+        val.className = 'usage-stat-value';
+        val.textContent = s.value;
+        const lbl = document.createElement('div');
+        lbl.className = 'usage-stat-label';
+        lbl.textContent = s.label;
+        stat.appendChild(val);
+        stat.appendChild(lbl);
+        statsRow.appendChild(stat);
+      });
+
+      results.appendChild(responseLabel);
+      results.appendChild(responseText);
+      results.appendChild(statsRow);
+
+      btn.textContent = '\u2713 Complete';
+      badge.textContent = latency + 'ms';
+      badge.className = 'card-badge badge-success';
+      scrollToBottom();
+    }, 800 + Math.random() * 600);
+  });
+  body.appendChild(btn);
+
+  card.appendChild(header);
+  card.appendChild(body);
+  return card;
+}
+
+function generateRandomKey(length) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
 }
 
 function scrollToBottom() {
