@@ -684,8 +684,13 @@ html, body {
 }
 
 .chat-messages::-webkit-scrollbar-thumb {
-  background: #ddd;
+  background: transparent;
   border-radius: 3px;
+  transition: background 0.3s;
+}
+
+.chat-messages:hover::-webkit-scrollbar-thumb {
+  background: #ddd;
 }
 
 /* API Key Rotation card */
