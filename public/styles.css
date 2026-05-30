@@ -484,6 +484,16 @@ textarea::placeholder {
 }
 
 /* Scrollbar */
+.chat-container {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 0.3s;
+}
+
+.chat-container:hover {
+  scrollbar-color: #444 transparent;
+}
+
 .chat-container::-webkit-scrollbar {
   width: 6px;
 }
@@ -495,11 +505,10 @@ textarea::placeholder {
 .chat-container::-webkit-scrollbar-thumb {
   background: transparent;
   border-radius: 3px;
-  transition: background 0.3s;
 }
 
 .chat-container:hover::-webkit-scrollbar-thumb {
-  background: #333;
+  background: #444;
 }
 
 /* Responsive */
