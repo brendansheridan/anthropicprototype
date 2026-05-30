@@ -493,8 +493,13 @@ textarea::placeholder {
 }
 
 .chat-container::-webkit-scrollbar-thumb {
-  background: #333;
+  background: transparent;
   border-radius: 3px;
+  transition: background 0.3s;
+}
+
+.chat-container:hover::-webkit-scrollbar-thumb {
+  background: #333;
 }
 
 /* Responsive */
