@@ -1,7 +1,12 @@
 /**
- * Concierge 2.0 — Scripted typewriter conversation.
- * Press SPACEBAR to advance to the next turn.
- * Each turn: user message types out → agent responds with text + card.
+ * Concierge 2.0 — Scripted typewriter in input bar.
+ *
+ * Flow:
+ * 1. Press SPACE → text types into the input bar (simulating typing)
+ * 2. Press ENTER → message sends up to chat area
+ * 3. Anthropic logo pulses (thinking)
+ * 4. Agent response + card renders
+ * 5. Wait for next SPACE press
  */
 
 const welcomeSection = document.getElementById('welcomeSection');
@@ -11,6 +16,7 @@ const chatInput = document.getElementById('chatInput');
 const chatSendBtn = document.getElementById('chatSendBtn');
 const searchInput = document.getElementById('searchInput');
 const searchSubmit = document.getElementById('searchSubmit');
+const inputHint = document.getElementById('inputHint');
 
 // Scripted conversation turns
 const SCRIPT = [
@@ -81,8 +87,8 @@ const SCRIPT = [
     }
   },
   {
-    user: "That looks good. Let's go ahead and upgrade to Scale.",
-    agent: "Done! Your upgrade to the **Scale plan** has been processed and the new limits are active immediately. You should see the rate-limit pressure drop right away. Welcome to Scale! \uD83C\uDF89",
+    user: "That looks great. Let's go ahead and upgrade to Scale.",
+    agent: "Done! Your upgrade to the **Scale plan** has been processed and the new limits are active immediately. You should see the rate-limit pressure drop right away. Welcome to Scale!",
     card: {
       type: 'upgrade_confirmation',
       data: {
@@ -95,46 +101,37 @@ const SCRIPT = [
     }
   },
   {
-    user: "Great, thanks! Can you also show me how to rotate my API keys?",
+    user: "Thanks! Can you also show me how to rotate my API keys?",
     agent: "Absolutely! You can rotate your API keys from the **API Settings** page. I\u2019d recommend creating a new key first, updating your environment variables, verifying everything works, then revoking the old key. Would you like me to walk you through that step by step, or open the API Settings page for you?",
     card: null
   }
 ];
 
 let currentTurn = -1;
-let isAnimating = false;
+let state = 'IDLE'; // IDLE, TYPING, READY_TO_SEND, RESPONDING
+let typeInterval = null;
 let conversationStarted = false;
 
 // Category buttons start the conversation
 document.querySelectorAll('.category-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    startConversation();
-  });
+  btn.addEventListener('click', () => startConversation());
 });
 
-// Search bar starts the conversation
-searchSubmit.addEventListener('click', () => {
-  startConversation();
-});
-
+searchSubmit.addEventListener('click', () => startConversation());
 searchInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') {
-    startConversation();
-  }
+  if (e.key === 'Enter') startConversation();
 });
 
-// SPACEBAR advances the script
+// Main keyboard handler
 document.addEventListener('keydown', (e) => {
-  if (e.code === 'Space' && conversationStarted && !isAnimating) {
-    e.preventDefault();
-    advanceTurn();
-  }
-});
+  if (!conversationStarted) return;
 
-// Also allow clicking the input area hint to advance
-chatInput.addEventListener('focus', () => {
-  if (conversationStarted && !isAnimating && currentTurn < SCRIPT.length - 1) {
-    chatInput.placeholder = 'Press SPACE to continue the conversation...';
+  if (e.code === 'Space' && state === 'IDLE') {
+    e.preventDefault();
+    advanceToNextTurn();
+  } else if (e.key === 'Enter' && state === 'READY_TO_SEND') {
+    e.preventDefault();
+    sendCurrentMessage();
   }
 });
 
@@ -142,63 +139,83 @@ function startConversation() {
   welcomeSection.classList.add('hidden');
   chatSection.classList.add('visible');
   conversationStarted = true;
-  chatInput.placeholder = 'Press SPACE to continue...';
-  chatInput.readOnly = true;
-  advanceTurn();
+  inputHint.textContent = 'Press SPACE to type next message';
+  advanceToNextTurn();
 }
 
-async function advanceTurn() {
+function advanceToNextTurn() {
   currentTurn++;
   if (currentTurn >= SCRIPT.length) {
+    chatInput.value = '';
     chatInput.placeholder = 'Demo complete \u2014 refresh to restart';
+    inputHint.textContent = '';
+    state = 'DONE';
     return;
   }
 
-  isAnimating = true;
-  const turn = SCRIPT[currentTurn];
+  state = 'TYPING';
+  inputHint.textContent = '';
+  chatInput.placeholder = '';
 
-  // Typewriter effect for user message
-  await typeUserMessage(turn.user);
+  const text = SCRIPT[currentTurn].user;
+  let charIndex = 0;
 
-  // Brief pause then show agent thinking
-  await delay(600);
-  const typingEl = showTyping();
+  // Type into input bar character by character
+  chatInput.value = '';
+  typeInterval = setInterval(() => {
+    chatInput.value += text[charIndex];
+    charIndex++;
+    if (charIndex >= text.length) {
+      clearInterval(typeInterval);
+      state = 'READY_TO_SEND';
+      inputHint.textContent = 'Press ENTER to send';
+      chatSendBtn.disabled = false;
+    }
+  }, 30);
+}
+
+async function sendCurrentMessage() {
+  const message = chatInput.value;
+  chatInput.value = '';
+  chatSendBtn.disabled = true;
+  state = 'RESPONDING';
+  inputHint.textContent = '';
+
+  // Add user message to chat area
+  appendUserMessage(message);
+
+  // Show thinking indicator (Anthropic logo pulsing)
+  const thinkingEl = showThinking();
 
   // Simulate thinking time
-  await delay(1200);
-  typingEl.remove();
+  await delay(1500);
+  thinkingEl.remove();
 
   // Show agent response
+  const turn = SCRIPT[currentTurn];
   appendAssistantMessage(turn.agent, turn.card);
-
-  isAnimating = false;
   scrollToBottom();
 
+  // Ready for next turn
+  state = 'IDLE';
   if (currentTurn < SCRIPT.length - 1) {
-    chatInput.placeholder = 'Press SPACE for next message...';
+    inputHint.textContent = 'Press SPACE for next message';
+    chatInput.placeholder = '';
   } else {
     chatInput.placeholder = 'Demo complete \u2014 refresh to restart';
+    inputHint.textContent = '';
   }
 }
 
-async function typeUserMessage(text) {
+function appendUserMessage(content) {
   const msg = document.createElement('div');
   msg.className = 'msg msg-user';
   const bubble = document.createElement('div');
   bubble.className = 'msg-bubble';
-  bubble.textContent = '';
+  bubble.textContent = content;
   msg.appendChild(bubble);
   chatMessages.appendChild(msg);
   scrollToBottom();
-
-  // Typewriter effect
-  for (let i = 0; i < text.length; i++) {
-    bubble.textContent += text[i];
-    scrollToBottom();
-    await delay(25 + Math.random() * 20);
-  }
-
-  await delay(200);
 }
 
 function appendAssistantMessage(content, card) {
@@ -217,6 +234,24 @@ function appendAssistantMessage(content, card) {
 
   chatMessages.appendChild(msg);
   scrollToBottom();
+}
+
+function showThinking() {
+  const el = document.createElement('div');
+  el.className = 'msg msg-assistant';
+  const thinking = document.createElement('div');
+  thinking.className = 'thinking-logo';
+  const img = document.createElement('img');
+  img.src = 'https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/anthropic.png';
+  img.alt = 'Thinking';
+  const label = document.createElement('span');
+  label.textContent = 'Thinking...';
+  thinking.appendChild(img);
+  thinking.appendChild(label);
+  el.appendChild(thinking);
+  chatMessages.appendChild(el);
+  scrollToBottom();
+  return el;
 }
 
 function renderText(container, text) {
@@ -498,18 +533,6 @@ function renderConfirmCard(data) {
   card.appendChild(header);
   card.appendChild(body);
   return card;
-}
-
-function showTyping() {
-  const el = document.createElement('div');
-  el.className = 'msg msg-assistant';
-  const dots = document.createElement('div');
-  dots.className = 'typing-dots';
-  for (let i = 0; i < 3; i++) dots.appendChild(document.createElement('span'));
-  el.appendChild(dots);
-  chatMessages.appendChild(el);
-  scrollToBottom();
-  return el;
 }
 
 function scrollToBottom() {
