@@ -4,6 +4,7 @@ const cors = require('cors');
 const path = require('path');
 const sf = require('./sf');
 const { getResponse } = require('./conversation');
+const { getConciergeResponse } = require('./concierge-conversation');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -85,6 +86,30 @@ app.post('/api/chat', async (req, res) => {
     console.error('Chat error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
+});
+
+// Concierge chat endpoint
+app.post('/api/concierge/chat', (req, res) => {
+  try {
+    const { message, conversationHistory } = req.body;
+    if (!message) {
+      return res.status(400).json({ error: 'Message is required' });
+    }
+    const result = getConciergeResponse(message, conversationHistory || []);
+    res.json({
+      response: result.response,
+      card: result.card,
+      conversationState: result.newState
+    });
+  } catch (err) {
+    console.error('Concierge chat error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Concierge page
+app.get('/concierge', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'concierge', 'index.html'));
 });
 
 // Fallback to index.html for SPA
