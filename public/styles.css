@@ -431,13 +431,14 @@ textarea::placeholder {
   margin-bottom: 24px;
 }
 
-.thinking-indicator svg {
-  animation: pulse 2s infinite;
+.thinking-indicator img {
+  border-radius: 6px;
+  animation: logoPulse 1.5s ease-in-out infinite;
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
+@keyframes logoPulse {
+  0%, 100% { opacity: 0.4; transform: scale(0.95); }
+  50% { opacity: 1; transform: scale(1.05); }
 }
 
 @keyframes fadeIn {

@@ -252,18 +252,12 @@ function renderInline(element, text) {
 function showThinking() {
   const el = document.createElement('div');
   el.className = 'thinking-indicator';
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('width', '24');
-  svg.setAttribute('height', '24');
-  svg.setAttribute('viewBox', '0 0 24 24');
-  svg.setAttribute('fill', 'none');
-  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  path.setAttribute('d', 'M12 2L13.5 8.5L20 7L15 12L20 17L13.5 15.5L12 22L10.5 15.5L4 17L9 12L4 7L10.5 8.5L12 2Z');
-  path.setAttribute('fill', '#d4856a');
-  path.setAttribute('stroke', '#d4856a');
-  path.setAttribute('stroke-width', '0.5');
-  svg.appendChild(path);
-  el.appendChild(svg);
+  const img = document.createElement('img');
+  img.src = 'https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/anthropic.png';
+  img.alt = 'Thinking';
+  img.width = 24;
+  img.height = 24;
+  el.appendChild(img);
   messagesEl.appendChild(el);
   scrollToBottom();
   return el;
