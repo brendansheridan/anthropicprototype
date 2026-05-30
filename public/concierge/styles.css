@@ -106,9 +106,10 @@ html, body {
 /* Main */
 .main {
   flex: 1;
-  overflow-y: auto;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 /* Welcome Section */
@@ -219,6 +220,8 @@ html, body {
   flex: 1;
   display: none;
   flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .chat-section.visible {
@@ -615,6 +618,7 @@ html, body {
   padding: 16px 24px;
   background: var(--bg);
   border-top: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 .chat-input-container {
