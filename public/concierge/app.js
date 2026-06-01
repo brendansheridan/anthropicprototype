@@ -1,12 +1,13 @@
 /**
- * Concierge 2.0 — Scripted typewriter in input bar.
+ * Concierge 2.0 — 4 conversation paths based on category button pressed.
  *
  * Flow:
- * 1. Press SPACE → text types into the input bar (simulating typing)
- * 2. Press ENTER → message sends up to chat area
- * 3. Anthropic logo pulses (thinking)
- * 4. Agent response + card renders
- * 5. Wait for next SPACE press
+ * 1. User clicks a category button → conversation path loads
+ * 2. Press SPACE → text types into the input bar
+ * 3. Press ENTER → message sends up to chat area
+ * 4. Anthropic logo pulses (thinking)
+ * 5. Agent response + card renders
+ * 6. Wait for next SPACE press
  */
 
 const welcomeSection = document.getElementById('welcomeSection');
@@ -18,140 +19,298 @@ const searchInput = document.getElementById('searchInput');
 const searchSubmit = document.getElementById('searchSubmit');
 const inputHint = document.getElementById('inputHint');
 
-// Scripted conversation turns
-const SCRIPT = [
-  {
-    user: "Can you show me my current billing and plan details?",
-    agent: "Of course! Here\u2019s your current billing summary. You\u2019re on the **Team plan** at $599/month with your next billing cycle on June 15th. You\u2019ve used about 81% of your included allocation so far this period.",
-    card: {
-      type: 'billing_summary',
-      data: {
-        plan: 'Team',
-        monthlyRate: '$599',
-        nextBilling: 'June 15, 2026',
-        paymentMethod: 'Visa ending in 4242',
-        currentUsage: '$487.32',
-        usagePercent: 81
-      }
-    }
-  },
-  {
-    user: "I've been hitting some rate limits lately. Can you show me my API usage?",
-    agent: "I can see you\u2019re hitting **87% of your rate limit** during peak hours, especially around 2 PM UTC. Your average daily request volume has been climbing steadily this week. Here\u2019s the full breakdown:",
-    card: {
-      type: 'api_usage',
-      data: {
-        dailyRequests: '14,832',
-        totalTokens: '2.4M',
-        avgLatency: '1.2s',
-        rateLimit: '1,000 RPM',
-        rateLimitUsed: 87,
-        peakHour: '2:00 PM UTC',
-        days: [
-          { label: 'Mon', value: 12400 },
-          { label: 'Tue', value: 13100 },
-          { label: 'Wed', value: 14832 },
-          { label: 'Thu', value: 11900 },
-          { label: 'Fri', value: 13600 },
-          { label: 'Sat', value: 8200 },
-          { label: 'Sun', value: 7100 }
-        ]
-      }
-    }
-  },
-  {
-    user: "What are my options for getting higher rate limits? Is there an upgrade path?",
-    agent: "Based on your usage patterns, I\u2019d recommend the **Scale plan**. You\u2019re regularly hitting rate limits which is adding latency to your production requests. Scale gives you 5x the throughput, access to Opus, and priority support. Here\u2019s how they compare:",
-    card: {
-      type: 'plan_comparison',
-      data: {
-        current: {
-          name: 'Team',
-          price: '$599/mo',
-          rateLimit: '1,000 RPM',
-          tokens: '5M tokens/mo',
-          support: 'Standard',
-          models: 'Sonnet, Haiku'
-        },
-        recommended: {
-          name: 'Scale',
-          price: '$1,499/mo',
-          rateLimit: '5,000 RPM',
-          tokens: '25M tokens/mo',
-          support: 'Priority 24/7',
-          models: 'Opus, Sonnet, Haiku',
-          highlight: true
-        },
-        savings: 'Based on your usage, Scale would eliminate all rate-limit delays and save ~4.2 engineering hours/week in retry handling.'
-      }
-    }
-  },
-  {
-    user: "That looks great. Let's go ahead and upgrade to Scale.",
-    agent: "Done! Your upgrade to the **Scale plan** has been processed and the new limits are active immediately. You should see the rate-limit pressure drop right away. Welcome to Scale!",
-    card: {
-      type: 'upgrade_confirmation',
-      data: {
-        plan: 'Scale',
-        effectiveDate: 'Immediately',
-        newRateLimit: '5,000 RPM',
-        newTokens: '25M tokens/mo',
-        nextBilling: 'June 15, 2026 \u2014 $1,499'
-      }
-    }
-  },
-  {
-    user: "I also need to rotate my API keys. Can you help with that?",
-    agent: "Of course! I can rotate your key right here. Your current key is shown below \u2014 click **Generate New Key** and I\u2019ll create a fresh one instantly. Make sure to copy it before navigating away.",
-    card: {
-      type: 'api_key_rotation',
-      data: {
-        currentKey: 'sk-ant-api03-****************************7f2x',
-        keyName: 'Production — main app',
-        created: 'Mar 12, 2026',
-        lastUsed: '2 minutes ago'
-      }
-    }
-  },
-  {
-    user: "I'd also like to set up a spending alert so I don't get surprised on my bill.",
-    agent: "Smart move! You can configure a spend alert threshold below. When your usage crosses that amount in a billing period, we\u2019ll notify you via email and Slack webhook.",
-    card: {
-      type: 'spend_alert',
-      data: {
-        currentSpend: 487.32,
-        budget: 1499,
-        suggestedThreshold: 1200
-      }
-    }
-  },
-  {
-    user: "One more thing — can I quickly test the latency on my new plan?",
-    agent: "Absolutely! Here\u2019s a quick model playground. Hit **Run Test** to send a sample prompt and see your new latency and token throughput in real time.",
-    card: {
-      type: 'model_playground',
-      data: {
-        model: 'claude-sonnet-4-6',
-        samplePrompt: 'Explain the difference between REST and GraphQL in one sentence.',
-        estimatedTokens: 42
-      }
-    }
-  }
-];
+// ============================================================
+// 4 CONVERSATION PATHS — one per category button
+// ============================================================
 
+const SCRIPTS = {
+  billing: [
+    {
+      user: "Can you show me my current billing and plan details?",
+      agent: "Of course! Here's your current billing summary. You're on the **Team plan** at $599/month with your next billing cycle on June 15th. You've used about 81% of your included allocation so far this period.",
+      card: {
+        type: 'billing_summary',
+        data: {
+          plan: 'Team',
+          monthlyRate: '$599',
+          nextBilling: 'June 15, 2026',
+          paymentMethod: 'Visa ending in 4242',
+          currentUsage: '$487.32',
+          usagePercent: 81
+        }
+      }
+    },
+    {
+      user: "That usage is higher than I expected. Can I set up an alert so I know before I hit my limit?",
+      agent: "Smart move! You can configure a spend alert threshold below. When your usage crosses that amount in a billing period, we'll notify you via email and Slack webhook.",
+      card: {
+        type: 'spend_alert',
+        data: {
+          currentSpend: 487.32,
+          budget: 599,
+          suggestedThreshold: 500
+        }
+      }
+    },
+    {
+      user: "Is there a way to get more capacity without overage charges?",
+      agent: "Based on your usage trajectory, I'd recommend upgrading to the **Scale plan**. You'd get 5x the token allowance and eliminate overage risk entirely. Here's a side-by-side comparison:",
+      card: {
+        type: 'plan_comparison',
+        data: {
+          current: {
+            name: 'Team',
+            price: '$599/mo',
+            rateLimit: '1,000 RPM',
+            tokens: '5M tokens/mo',
+            support: 'Standard',
+            models: 'Sonnet, Haiku'
+          },
+          recommended: {
+            name: 'Scale',
+            price: '$1,499/mo',
+            rateLimit: '5,000 RPM',
+            tokens: '25M tokens/mo',
+            support: 'Priority 24/7',
+            models: 'Opus, Sonnet, Haiku',
+            highlight: true
+          },
+          savings: 'At your current trajectory, you\'ll hit overage fees of ~$200/mo. Scale eliminates that and gives you room to grow.'
+        }
+      }
+    }
+  ],
+
+  usage: [
+    {
+      user: "I've been hitting rate limits in production. Can you show me my API usage?",
+      agent: "I can see you're hitting **87% of your rate limit** during peak hours, especially around 2 PM UTC. Your average daily request volume has been climbing steadily this week. Here's the full breakdown:",
+      card: {
+        type: 'api_usage',
+        data: {
+          dailyRequests: '14,832',
+          totalTokens: '2.4M',
+          avgLatency: '1.2s',
+          rateLimit: '1,000 RPM',
+          rateLimitUsed: 87,
+          peakHour: '2:00 PM UTC',
+          days: [
+            { label: 'Mon', value: 12400 },
+            { label: 'Tue', value: 13100 },
+            { label: 'Wed', value: 14832 },
+            { label: 'Thu', value: 11900 },
+            { label: 'Fri', value: 13600 },
+            { label: 'Sat', value: 8200 },
+            { label: 'Sun', value: 7100 }
+          ]
+        }
+      }
+    },
+    {
+      user: "Can I test what my latency looks like right now with my current plan?",
+      agent: "Absolutely! Here's a quick model playground. Hit **Run Test** to send a sample prompt and see your current latency and token throughput in real time.",
+      card: {
+        type: 'model_playground',
+        data: {
+          model: 'claude-sonnet-4-6',
+          samplePrompt: 'Explain the difference between REST and GraphQL in one sentence.',
+          estimatedTokens: 42
+        }
+      }
+    },
+    {
+      user: "That latency is higher than I'd like. What can I do to get faster responses?",
+      agent: "The latency you're seeing is directly related to hitting your rate limit ceiling. When requests queue up, response times increase. Upgrading to **Scale** gives you 5x throughput and significantly lower p95 latency during peak hours:",
+      card: {
+        type: 'plan_comparison',
+        data: {
+          current: {
+            name: 'Team',
+            price: '$599/mo',
+            rateLimit: '1,000 RPM',
+            tokens: '5M tokens/mo',
+            support: 'Standard',
+            models: 'Sonnet, Haiku'
+          },
+          recommended: {
+            name: 'Scale',
+            price: '$1,499/mo',
+            rateLimit: '5,000 RPM',
+            tokens: '25M tokens/mo',
+            support: 'Priority 24/7',
+            models: 'Opus, Sonnet, Haiku',
+            highlight: true
+          },
+          savings: 'Based on your usage, Scale would eliminate all rate-limit delays and save ~4.2 engineering hours/week in retry handling.'
+        }
+      }
+    },
+    {
+      user: "Let's do it. Upgrade me to Scale.",
+      agent: "Done! Your upgrade to the **Scale plan** has been processed and the new limits are active immediately. You should see the rate-limit pressure drop right away. Welcome to Scale!",
+      card: {
+        type: 'upgrade_confirmation',
+        data: {
+          plan: 'Scale',
+          effectiveDate: 'Immediately',
+          newRateLimit: '5,000 RPM',
+          newTokens: '25M tokens/mo',
+          nextBilling: 'June 15, 2026 — $1,499'
+        }
+      }
+    }
+  ],
+
+  access: [
+    {
+      user: "I need to rotate my production API key. There may have been a leak.",
+      agent: "I'll help you with that right away. Here's your current key — click **Generate New Key** to create a new one and automatically revoke the old one. Make sure to copy the new key before navigating away.",
+      card: {
+        type: 'api_key_rotation',
+        data: {
+          currentKey: 'sk-ant-api03-****************************7f2x',
+          keyName: 'Production — main app',
+          created: 'Mar 12, 2026',
+          lastUsed: '2 minutes ago'
+        }
+      }
+    },
+    {
+      user: "Done. Can you show me my recent API usage to make sure nothing unusual happened?",
+      agent: "Here's your usage for the last 7 days. I don't see any anomalous spikes that would suggest unauthorized usage, but the key rotation was a good precaution.",
+      card: {
+        type: 'api_usage',
+        data: {
+          dailyRequests: '14,832',
+          totalTokens: '2.4M',
+          avgLatency: '1.2s',
+          rateLimit: '1,000 RPM',
+          rateLimitUsed: 87,
+          peakHour: '2:00 PM UTC',
+          days: [
+            { label: 'Mon', value: 12400 },
+            { label: 'Tue', value: 13100 },
+            { label: 'Wed', value: 14832 },
+            { label: 'Thu', value: 11900 },
+            { label: 'Fri', value: 13600 },
+            { label: 'Sat', value: 8200 },
+            { label: 'Sun', value: 7100 }
+          ]
+        }
+      }
+    },
+    {
+      user: "Good, looks normal. Can I set up a spend alert as an extra safety net?",
+      agent: "Absolutely. Configure your threshold below — if usage spikes unexpectedly you'll get notified immediately before any significant charges accrue.",
+      card: {
+        type: 'spend_alert',
+        data: {
+          currentSpend: 487.32,
+          budget: 599,
+          suggestedThreshold: 500
+        }
+      }
+    }
+  ],
+
+  plans: [
+    {
+      user: "What plans are available and how do they compare to what I have now?",
+      agent: "You're currently on the **Team plan**. Here's how it compares to our **Scale** tier, which is the next step up. Scale is designed for production workloads that need higher throughput and priority support:",
+      card: {
+        type: 'plan_comparison',
+        data: {
+          current: {
+            name: 'Team',
+            price: '$599/mo',
+            rateLimit: '1,000 RPM',
+            tokens: '5M tokens/mo',
+            support: 'Standard',
+            models: 'Sonnet, Haiku'
+          },
+          recommended: {
+            name: 'Scale',
+            price: '$1,499/mo',
+            rateLimit: '5,000 RPM',
+            tokens: '25M tokens/mo',
+            support: 'Priority 24/7',
+            models: 'Opus, Sonnet, Haiku',
+            highlight: true
+          },
+          savings: 'Scale includes access to Opus for complex reasoning tasks, 5x rate limits, and dedicated support with <1hr response SLA.'
+        }
+      }
+    },
+    {
+      user: "What does my current usage look like? Would Scale actually benefit me?",
+      agent: "Let me pull your numbers. You're at **87% of your rate limit** during peak hours and climbing week over week — so yes, you'd see an immediate improvement:",
+      card: {
+        type: 'api_usage',
+        data: {
+          dailyRequests: '14,832',
+          totalTokens: '2.4M',
+          avgLatency: '1.2s',
+          rateLimit: '1,000 RPM',
+          rateLimitUsed: 87,
+          peakHour: '2:00 PM UTC',
+          days: [
+            { label: 'Mon', value: 12400 },
+            { label: 'Tue', value: 13100 },
+            { label: 'Wed', value: 14832 },
+            { label: 'Thu', value: 11900 },
+            { label: 'Fri', value: 13600 },
+            { label: 'Sat', value: 8200 },
+            { label: 'Sun', value: 7100 }
+          ]
+        }
+      }
+    },
+    {
+      user: "OK, I'm convinced. Let's upgrade to Scale.",
+      agent: "Done! Your upgrade to the **Scale plan** has been processed and the new limits are active immediately. Your team now has access to Opus and 5,000 RPM. Welcome to Scale!",
+      card: {
+        type: 'upgrade_confirmation',
+        data: {
+          plan: 'Scale',
+          effectiveDate: 'Immediately',
+          newRateLimit: '5,000 RPM',
+          newTokens: '25M tokens/mo',
+          nextBilling: 'June 15, 2026 — $1,499'
+        }
+      }
+    },
+    {
+      user: "Can I quickly test the new throughput to confirm it's working?",
+      agent: "Of course! Hit **Run Test** below to fire a request on your new Scale plan and see the improved latency.",
+      card: {
+        type: 'model_playground',
+        data: {
+          model: 'claude-sonnet-4-6',
+          samplePrompt: 'Summarize the key benefits of moving from monolith to microservices.',
+          estimatedTokens: 56
+        }
+      }
+    }
+  ]
+};
+
+let activeScript = [];
 let currentTurn = -1;
 let state = 'IDLE'; // IDLE, TYPING, READY_TO_SEND, RESPONDING
 let typeInterval = null;
 let conversationStarted = false;
 
-// Category buttons start the conversation
+// Category buttons start conversation with specific path
 document.querySelectorAll('.category-btn').forEach(btn => {
-  btn.addEventListener('click', () => startConversation());
+  btn.addEventListener('click', () => {
+    const path = btn.dataset.path;
+    startConversation(path);
+  });
 });
 
-searchSubmit.addEventListener('click', () => startConversation());
+searchSubmit.addEventListener('click', () => startConversation('billing'));
 searchInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') startConversation();
+  if (e.key === 'Enter') startConversation('billing');
 });
 
 // Main keyboard handler
@@ -167,19 +326,22 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-function startConversation() {
+function startConversation(path) {
+  activeScript = SCRIPTS[path] || SCRIPTS.billing;
+  currentTurn = -1;
   welcomeSection.classList.add('hidden');
   chatSection.classList.add('visible');
   conversationStarted = true;
-  inputHint.textContent = 'Press SPACE to type next message';
+  chatMessages.textContent = '';
+  inputHint.textContent = 'Press SPACE to start the conversation';
   advanceToNextTurn();
 }
 
 function advanceToNextTurn() {
   currentTurn++;
-  if (currentTurn >= SCRIPT.length) {
+  if (currentTurn >= activeScript.length) {
     chatInput.value = '';
-    chatInput.placeholder = 'Demo complete \u2014 refresh to restart';
+    chatInput.placeholder = 'Demo complete — refresh to restart';
     inputHint.textContent = '';
     state = 'DONE';
     return;
@@ -189,10 +351,9 @@ function advanceToNextTurn() {
   inputHint.textContent = '';
   chatInput.placeholder = '';
 
-  const text = SCRIPT[currentTurn].user;
+  const text = activeScript[currentTurn].user;
   let charIndex = 0;
 
-  // Type into input bar character by character
   chatInput.value = '';
   typeInterval = setInterval(() => {
     chatInput.value += text[charIndex];
@@ -213,28 +374,22 @@ async function sendCurrentMessage() {
   state = 'RESPONDING';
   inputHint.textContent = '';
 
-  // Add user message to chat area
   appendUserMessage(message);
 
-  // Show thinking indicator (Anthropic logo pulsing)
   const thinkingEl = showThinking();
-
-  // Simulate thinking time
   await delay(1500);
   thinkingEl.remove();
 
-  // Show agent response
-  const turn = SCRIPT[currentTurn];
+  const turn = activeScript[currentTurn];
   appendAssistantMessage(turn.agent, turn.card);
   scrollToBottom();
 
-  // Ready for next turn
   state = 'IDLE';
-  if (currentTurn < SCRIPT.length - 1) {
+  if (currentTurn < activeScript.length - 1) {
     inputHint.textContent = 'Press SPACE for next message';
     chatInput.placeholder = '';
   } else {
-    chatInput.placeholder = 'Demo complete \u2014 refresh to restart';
+    chatInput.placeholder = 'Demo complete — refresh to restart';
     inputHint.textContent = '';
   }
 }
@@ -312,26 +467,16 @@ function renderCard(card) {
   }
 }
 
+// === Card Renderers ===
+
 function renderBillingCard(data) {
   const card = document.createElement('div');
   card.className = 'card';
-
-  const header = document.createElement('div');
-  header.className = 'card-header';
-  const title = document.createElement('span');
-  title.className = 'card-title';
-  title.textContent = 'Billing Summary';
-  const badge = document.createElement('span');
-  badge.className = 'card-badge badge-active';
-  badge.textContent = 'Active';
-  header.appendChild(title);
-  header.appendChild(badge);
-
+  const header = createCardHeader('Billing Summary', 'Active', 'badge-active');
   const body = document.createElement('div');
   body.className = 'card-body';
   const grid = document.createElement('div');
   grid.className = 'billing-grid';
-
   [
     { label: 'Current Plan', value: data.plan, large: false },
     { label: 'Monthly Rate', value: data.monthlyRate, large: true },
@@ -351,21 +496,12 @@ function renderBillingCard(data) {
     grid.appendChild(el);
   });
   body.appendChild(grid);
-
   const progressLabel = document.createElement('div');
   progressLabel.className = 'billing-label';
   progressLabel.textContent = 'Current period usage: ' + data.currentUsage + ' (' + data.usagePercent + '%)';
   progressLabel.style.marginTop = '16px';
   body.appendChild(progressLabel);
-
-  const progress = document.createElement('div');
-  progress.className = 'progress-bar';
-  const fill = document.createElement('div');
-  fill.className = 'progress-fill ' + (data.usagePercent > 80 ? 'warning' : 'ok');
-  fill.style.width = data.usagePercent + '%';
-  progress.appendChild(fill);
-  body.appendChild(progress);
-
+  body.appendChild(createProgressBar(data.usagePercent, data.usagePercent > 80));
   card.appendChild(header);
   card.appendChild(body);
   return card;
@@ -374,21 +510,9 @@ function renderBillingCard(data) {
 function renderUsageCard(data) {
   const card = document.createElement('div');
   card.className = 'card';
-
-  const header = document.createElement('div');
-  header.className = 'card-header';
-  const title = document.createElement('span');
-  title.className = 'card-title';
-  title.textContent = 'API Usage \u2014 Last 7 Days';
-  const badge = document.createElement('span');
-  badge.className = 'card-badge badge-warning';
-  badge.textContent = data.rateLimitUsed + '% of limit';
-  header.appendChild(title);
-  header.appendChild(badge);
-
+  const header = createCardHeader('API Usage — Last 7 Days', data.rateLimitUsed + '% of limit', 'badge-warning');
   const body = document.createElement('div');
   body.className = 'card-body';
-
   const stats = document.createElement('div');
   stats.className = 'usage-stats';
   [
@@ -409,7 +533,6 @@ function renderUsageCard(data) {
     stats.appendChild(stat);
   });
   body.appendChild(stats);
-
   const chart = document.createElement('div');
   chart.className = 'usage-chart';
   const maxVal = Math.max(...data.days.map(d => d.value));
@@ -427,20 +550,12 @@ function renderUsageCard(data) {
     chart.appendChild(group);
   });
   body.appendChild(chart);
-
   const progressLabel = document.createElement('div');
   progressLabel.className = 'billing-label';
   progressLabel.textContent = 'Rate limit: ' + data.rateLimit + ' (peak at ' + data.peakHour + ')';
   progressLabel.style.marginTop = '12px';
   body.appendChild(progressLabel);
-  const progress = document.createElement('div');
-  progress.className = 'progress-bar';
-  const fill = document.createElement('div');
-  fill.className = 'progress-fill warning';
-  fill.style.width = data.rateLimitUsed + '%';
-  progress.appendChild(fill);
-  body.appendChild(progress);
-
+  body.appendChild(createProgressBar(data.rateLimitUsed, true));
   card.appendChild(header);
   card.appendChild(body);
   return card;
@@ -449,61 +564,37 @@ function renderUsageCard(data) {
 function renderPlanCard(data) {
   const card = document.createElement('div');
   card.className = 'card';
-
-  const header = document.createElement('div');
-  header.className = 'card-header';
-  const title = document.createElement('span');
-  title.className = 'card-title';
-  title.textContent = 'Plan Comparison';
-  const badge = document.createElement('span');
-  badge.className = 'card-badge badge-info';
-  badge.textContent = 'Upgrade Available';
-  header.appendChild(title);
-  header.appendChild(badge);
-
+  const header = createCardHeader('Plan Comparison', 'Upgrade Available', 'badge-info');
   const body = document.createElement('div');
   body.className = 'card-body';
-
   const grid = document.createElement('div');
   grid.className = 'plan-grid';
-
   [data.current, data.recommended].forEach(plan => {
     const col = document.createElement('div');
     col.className = 'plan-col' + (plan.highlight ? ' recommended' : '');
-
     const name = document.createElement('div');
     name.className = 'plan-name';
     name.textContent = plan.name;
-
     const price = document.createElement('div');
     price.className = 'plan-price';
     price.textContent = plan.price;
-
     const features = document.createElement('ul');
     features.className = 'plan-features';
-    [
-      plan.rateLimit + ' rate limit',
-      plan.tokens + ' included',
-      plan.support + ' support',
-      plan.models + ' models'
-    ].forEach(f => {
+    [plan.rateLimit + ' rate limit', plan.tokens + ' included', plan.support + ' support', plan.models + ' models'].forEach(f => {
       const li = document.createElement('li');
       li.textContent = f;
       features.appendChild(li);
     });
-
     col.appendChild(name);
     col.appendChild(price);
     col.appendChild(features);
     grid.appendChild(col);
   });
   body.appendChild(grid);
-
   const savings = document.createElement('div');
   savings.className = 'plan-savings';
   savings.textContent = data.savings;
   body.appendChild(savings);
-
   card.appendChild(header);
   card.appendChild(body);
   return card;
@@ -512,32 +603,17 @@ function renderPlanCard(data) {
 function renderConfirmCard(data) {
   const card = document.createElement('div');
   card.className = 'card';
-
-  const header = document.createElement('div');
-  header.className = 'card-header';
-  const title = document.createElement('span');
-  title.className = 'card-title';
-  title.textContent = 'Upgrade Confirmed';
-  const badge = document.createElement('span');
-  badge.className = 'card-badge badge-success';
-  badge.textContent = 'Complete';
-  header.appendChild(title);
-  header.appendChild(badge);
-
+  const header = createCardHeader('Upgrade Confirmed', 'Complete', 'badge-success');
   const body = document.createElement('div');
   body.className = 'card-body';
-
   const content = document.createElement('div');
   content.className = 'confirm-content';
-
   const icon = document.createElement('div');
   icon.className = 'confirm-icon';
   icon.textContent = '\u2713';
-
   const titleEl = document.createElement('div');
   titleEl.className = 'confirm-title';
   titleEl.textContent = 'Welcome to ' + data.plan + '!';
-
   const details = document.createElement('div');
   details.className = 'confirm-details';
   [
@@ -559,58 +635,34 @@ function renderConfirmCard(data) {
     row.appendChild(val);
     details.appendChild(row);
   });
-
   content.appendChild(icon);
   content.appendChild(titleEl);
   content.appendChild(details);
   body.appendChild(content);
-
   card.appendChild(header);
   card.appendChild(body);
   return card;
 }
 
-// === Interactive Card: API Key Rotation ===
 function renderAPIKeyCard(data) {
   const card = document.createElement('div');
   card.className = 'card';
-
-  const header = document.createElement('div');
-  header.className = 'card-header';
-  const title = document.createElement('span');
-  title.className = 'card-title';
-  title.textContent = 'API Key Management';
-  const badge = document.createElement('span');
-  badge.className = 'card-badge badge-active';
-  badge.textContent = 'Active';
-  header.appendChild(title);
-  header.appendChild(badge);
-
+  const header = createCardHeader('API Key Management', 'Active', 'badge-active');
   const body = document.createElement('div');
   body.className = 'card-body';
-
-  // Current key display
-  const keyInfo = document.createElement('div');
-  keyInfo.className = 'key-info';
-
   const keyLabel = document.createElement('div');
   keyLabel.className = 'billing-label';
   keyLabel.textContent = data.keyName;
-
   const keyValue = document.createElement('div');
   keyValue.className = 'key-value';
   keyValue.textContent = data.currentKey;
-
   const keyMeta = document.createElement('div');
   keyMeta.className = 'key-meta';
   keyMeta.textContent = 'Created ' + data.created + ' \u00B7 Last used ' + data.lastUsed;
-
-  keyInfo.appendChild(keyLabel);
-  keyInfo.appendChild(keyValue);
-  keyInfo.appendChild(keyMeta);
-  body.appendChild(keyInfo);
-
-  // Generate button
+  body.appendChild(keyLabel);
+  body.appendChild(keyValue);
+  body.appendChild(keyMeta);
+  const badge = header.querySelector('.card-badge');
   const btn = document.createElement('button');
   btn.className = 'upgrade-btn';
   btn.textContent = 'Generate New Key';
@@ -618,7 +670,6 @@ function renderAPIKeyCard(data) {
     btn.disabled = true;
     btn.textContent = 'Generating...';
     setTimeout(() => {
-      // Generate a realistic-looking key
       const newKey = 'sk-ant-api03-' + generateRandomKey(48);
       keyValue.textContent = newKey;
       keyValue.classList.add('key-new');
@@ -632,8 +683,6 @@ function renderAPIKeyCard(data) {
         btn.textContent = 'Copied!';
         btn.disabled = true;
       }, { once: true });
-
-      // Warning
       const warning = document.createElement('div');
       warning.className = 'key-warning';
       warning.textContent = '\u26A0\uFE0F Your old key has been revoked. Update your environment variables.';
@@ -641,32 +690,18 @@ function renderAPIKeyCard(data) {
     }, 1200);
   });
   body.appendChild(btn);
-
   card.appendChild(header);
   card.appendChild(body);
   return card;
 }
 
-// === Interactive Card: Spend Alert ===
 function renderSpendAlertCard(data) {
   const card = document.createElement('div');
   card.className = 'card';
-
-  const header = document.createElement('div');
-  header.className = 'card-header';
-  const title = document.createElement('span');
-  title.className = 'card-title';
-  title.textContent = 'Spend Alert Configuration';
-  const badge = document.createElement('span');
-  badge.className = 'card-badge badge-info';
-  badge.textContent = 'Configure';
-  header.appendChild(title);
-  header.appendChild(badge);
-
+  const header = createCardHeader('Spend Alert Configuration', 'Configure', 'badge-info');
+  const badge = header.querySelector('.card-badge');
   const body = document.createElement('div');
   body.className = 'card-body';
-
-  // Current spend indicator
   const spendRow = document.createElement('div');
   spendRow.className = 'spend-row';
   const spendLabel = document.createElement('span');
@@ -678,38 +713,29 @@ function renderSpendAlertCard(data) {
   spendRow.appendChild(spendLabel);
   spendRow.appendChild(spendValue);
   body.appendChild(spendRow);
-
-  // Threshold slider
   const sliderGroup = document.createElement('div');
   sliderGroup.className = 'slider-group';
-
   const sliderLabel = document.createElement('div');
   sliderLabel.className = 'slider-label';
   sliderLabel.textContent = 'Alert threshold: $' + data.suggestedThreshold;
-
   const slider = document.createElement('input');
   slider.type = 'range';
   slider.min = '100';
   slider.max = String(data.budget);
   slider.value = String(data.suggestedThreshold);
   slider.className = 'threshold-slider';
-
   slider.addEventListener('input', () => {
     sliderLabel.textContent = 'Alert threshold: $' + slider.value;
   });
-
   sliderGroup.appendChild(sliderLabel);
   sliderGroup.appendChild(slider);
   body.appendChild(sliderGroup);
-
-  // Notification channels
   const channels = document.createElement('div');
   channels.className = 'alert-channels';
   const channelsLabel = document.createElement('div');
   channelsLabel.className = 'billing-label';
   channelsLabel.textContent = 'Notify via:';
   channels.appendChild(channelsLabel);
-
   const channelOpts = document.createElement('div');
   channelOpts.className = 'channel-options';
   ['Email', 'Slack Webhook', 'SMS'].forEach(ch => {
@@ -726,8 +752,6 @@ function renderSpendAlertCard(data) {
   });
   channels.appendChild(channelOpts);
   body.appendChild(channels);
-
-  // Save button
   const btn = document.createElement('button');
   btn.className = 'upgrade-btn';
   btn.textContent = 'Save Alert';
@@ -741,32 +765,18 @@ function renderSpendAlertCard(data) {
     }, 800);
   });
   body.appendChild(btn);
-
   card.appendChild(header);
   card.appendChild(body);
   return card;
 }
 
-// === Interactive Card: Model Playground ===
 function renderPlaygroundCard(data) {
   const card = document.createElement('div');
   card.className = 'card';
-
-  const header = document.createElement('div');
-  header.className = 'card-header';
-  const title = document.createElement('span');
-  title.className = 'card-title';
-  title.textContent = 'Model Playground';
-  const badge = document.createElement('span');
-  badge.className = 'card-badge badge-active';
-  badge.textContent = data.model;
-  header.appendChild(title);
-  header.appendChild(badge);
-
+  const header = createCardHeader('Model Playground', data.model, 'badge-active');
+  const badge = header.querySelector('.card-badge');
   const body = document.createElement('div');
   body.className = 'card-body';
-
-  // Prompt display
   const promptGroup = document.createElement('div');
   promptGroup.className = 'playground-prompt';
   const promptLabel = document.createElement('div');
@@ -778,39 +788,27 @@ function renderPlaygroundCard(data) {
   promptGroup.appendChild(promptLabel);
   promptGroup.appendChild(promptText);
   body.appendChild(promptGroup);
-
-  // Results area (hidden initially)
   const results = document.createElement('div');
   results.className = 'playground-results';
   results.style.display = 'none';
   body.appendChild(results);
-
-  // Run button
   const btn = document.createElement('button');
   btn.className = 'upgrade-btn';
   btn.textContent = 'Run Test';
   btn.addEventListener('click', () => {
     btn.disabled = true;
     btn.textContent = 'Running...';
-
-    // Simulate latency
-    const startTime = Date.now();
     setTimeout(() => {
       const latency = (180 + Math.random() * 120).toFixed(0);
       const tokens = 38 + Math.floor(Math.random() * 15);
       const tokensPerSec = (tokens / (parseInt(latency) / 1000)).toFixed(1);
-
       results.style.display = 'block';
-
-      // Response text
       const responseLabel = document.createElement('div');
       responseLabel.className = 'billing-label';
       responseLabel.textContent = 'Response';
       const responseText = document.createElement('div');
       responseText.className = 'playground-response';
       responseText.textContent = 'REST is a resource-based architectural style using standard HTTP methods, while GraphQL is a query language that lets clients request exactly the data they need in a single endpoint.';
-
-      // Stats
       const statsRow = document.createElement('div');
       statsRow.className = 'playground-stats';
       [
@@ -830,11 +828,9 @@ function renderPlaygroundCard(data) {
         stat.appendChild(lbl);
         statsRow.appendChild(stat);
       });
-
       results.appendChild(responseLabel);
       results.appendChild(responseText);
       results.appendChild(statsRow);
-
       btn.textContent = '\u2713 Complete';
       badge.textContent = latency + 'ms';
       badge.className = 'card-badge badge-success';
@@ -842,10 +838,35 @@ function renderPlaygroundCard(data) {
     }, 800 + Math.random() * 600);
   });
   body.appendChild(btn);
-
   card.appendChild(header);
   card.appendChild(body);
   return card;
+}
+
+// === Helpers ===
+
+function createCardHeader(titleText, badgeText, badgeClass) {
+  const header = document.createElement('div');
+  header.className = 'card-header';
+  const title = document.createElement('span');
+  title.className = 'card-title';
+  title.textContent = titleText;
+  const badge = document.createElement('span');
+  badge.className = 'card-badge ' + badgeClass;
+  badge.textContent = badgeText;
+  header.appendChild(title);
+  header.appendChild(badge);
+  return header;
+}
+
+function createProgressBar(percent, isWarning) {
+  const progress = document.createElement('div');
+  progress.className = 'progress-bar';
+  const fill = document.createElement('div');
+  fill.className = 'progress-fill ' + (isWarning ? 'warning' : 'ok');
+  fill.style.width = percent + '%';
+  progress.appendChild(fill);
+  return progress;
 }
 
 function generateRandomKey(length) {
