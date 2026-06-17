@@ -194,7 +194,7 @@ html, body {
   display: flex;
   flex-direction: column;
   transform: translateX(calc(100% + 24px));
-  transition: transform 0.2s ease;
+  transition: transform 0.2s ease, width 0.24s ease;
   z-index: 30;
   overflow: hidden;
 }
@@ -222,13 +222,17 @@ html, body {
   cursor: pointer;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.15s ease;
+  transition: opacity 0.15s ease, left 0.24s ease;
   box-shadow: -3px 4px 14px rgba(0, 0, 0, 0.15);
 }
 
 .help-drawer.article-mode:hover .help-article-side-toggle {
   opacity: 1;
   pointer-events: auto;
+}
+
+.help-drawer.expanded .help-article-side-toggle {
+  left: -16px;
 }
 
 .help-drawer-header {
