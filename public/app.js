@@ -17,6 +17,8 @@ const newChatBtn = document.getElementById('newChatBtn');
 const helpLauncherBtn = document.getElementById('helpLauncherBtn');
 const helpDrawer = document.getElementById('helpDrawer');
 const helpCloseBtn = document.getElementById('helpCloseBtn');
+const helpMenuBtn = document.getElementById('helpMenuBtn');
+const helpMenu = document.getElementById('helpMenu');
 const helpEndBtn = document.getElementById('helpEndBtn');
 const helpMessages = document.getElementById('helpMessages');
 const helpInput = document.getElementById('helpInput');
@@ -312,7 +314,8 @@ function renderHelpEntries(entries) {
   entries.forEach(entry => {
     if (!entry.id || helpRenderedIds.has(entry.id)) return;
     helpRenderedIds.add(entry.id);
-    const role = entry.senderRole === 'endUser' ? 'user' : 'agent';
+    const senderRole = String(entry.senderRole || '').toLowerCase();
+    const role = senderRole === 'enduser' ? 'user' : 'agent';
     if (role === 'user') {
       const pendingIndex = pendingUserMessages.findIndex(msg => msg === entry.text);
       if (pendingIndex !== -1) {
@@ -412,6 +415,25 @@ function stopHelpPolling() {
   }
 }
 
+function closeHelpMenu() {
+  if (!helpMenu || !helpMenuBtn) return;
+  helpMenu.classList.remove('open');
+  helpMenu.setAttribute('aria-hidden', 'true');
+  helpMenuBtn.setAttribute('aria-expanded', 'false');
+}
+
+function toggleHelpMenu() {
+  if (!helpMenu || !helpMenuBtn) return;
+  const shouldOpen = !helpMenu.classList.contains('open');
+  if (shouldOpen) {
+    helpMenu.classList.add('open');
+    helpMenu.setAttribute('aria-hidden', 'false');
+    helpMenuBtn.setAttribute('aria-expanded', 'true');
+  } else {
+    closeHelpMenu();
+  }
+}
+
 function resetHelpConversationState() {
   helpSession = null;
   helpRenderedIds.clear();
@@ -419,6 +441,7 @@ function resetHelpConversationState() {
   if (helpMessages) {
     helpMessages.textContent = '';
   }
+  closeHelpMenu();
   if (helpInput) {
     helpInput.value = '';
     helpInput.style.height = 'auto';
@@ -468,6 +491,7 @@ async function endHelpConversation() {
 
 function closeHelpDrawer() {
   isHelpOpen = false;
+  closeHelpMenu();
   if (helpDrawer) {
     helpDrawer.classList.remove('open');
     helpDrawer.setAttribute('aria-hidden', 'true');
@@ -527,9 +551,26 @@ if (helpCloseBtn) {
   helpCloseBtn.addEventListener('click', closeHelpDrawer);
 }
 
-if (helpEndBtn) {
-  helpEndBtn.addEventListener('click', endHelpConversation);
+if (helpMenuBtn) {
+  helpMenuBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    toggleHelpMenu();
+  });
 }
+
+if (helpEndBtn) {
+  helpEndBtn.addEventListener('click', async () => {
+    closeHelpMenu();
+    await endHelpConversation();
+  });
+}
+
+document.addEventListener('click', e => {
+  if (!helpMenu || !helpMenuBtn) return;
+  if (!helpMenu.contains(e.target) && !helpMenuBtn.contains(e.target)) {
+    closeHelpMenu();
+  }
+});
 
 if (helpInput && helpSendBtn) {
   helpInput.addEventListener('input', () => {

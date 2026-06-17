@@ -185,7 +185,18 @@
             <span id="helpStatusText">Start a support conversation</span>
           </div>
           <div class="help-header-actions">
-            <button class="help-end-btn" id="helpEndBtn" title="End current conversation">End Conversation</button>
+            <div class="help-menu-wrap">
+              <button class="sidebar-icon-btn" id="helpMenuBtn" title="More options" aria-haspopup="true" aria-expanded="false">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="5" r="1.5"></circle>
+                  <circle cx="12" cy="12" r="1.5"></circle>
+                  <circle cx="12" cy="19" r="1.5"></circle>
+                </svg>
+              </button>
+              <div class="help-menu" id="helpMenu" aria-hidden="true">
+                <button class="help-end-btn" id="helpEndBtn" title="End current conversation">End Conversation</button>
+              </div>
+            </div>
             <button class="sidebar-icon-btn" id="helpCloseBtn" title="Close Help">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="18" y1="6" x2="6" y2="18"></line>

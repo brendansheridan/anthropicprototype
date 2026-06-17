@@ -227,6 +227,13 @@ async function getMessagingMessages({ accessToken, conversationId }) {
   const data = await response.json();
   const conversationEntries = Array.isArray(data.conversationEntries) ? data.conversationEntries : [];
 
+  function normalizeSenderRole(rawRole) {
+    const normalized = String(rawRole || '').toLowerCase();
+    if (normalized === 'enduser') return 'endUser';
+    if (normalized === 'chatbot' || normalized === 'agent') return 'agent';
+    return 'system';
+  }
+
   const parsed = conversationEntries
     .filter(entry => entry.entryType === 'Message')
     .map(entry => {
@@ -234,7 +241,7 @@ async function getMessagingMessages({ accessToken, conversationId }) {
       const text = payload && payload.staticContent ? payload.staticContent.text : null;
       return {
         id: payload && payload.id ? payload.id : `${entry.serverTimestamp || Date.now()}`,
-        senderRole: (entry.sender && entry.sender.role) || 'system',
+        senderRole: normalizeSenderRole(entry.sender && entry.sender.role),
         text,
         timestamp: entry.serverTimestamp || entry.clientTimestamp || 0
       };
