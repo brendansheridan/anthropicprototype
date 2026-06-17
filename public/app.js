@@ -30,6 +30,7 @@ let helpSession = null;
 let isHelpOpen = false;
 let helpPollingId = null;
 const helpRenderedIds = new Set();
+const pendingUserMessages = [];
 
 // Get active input
 function getActiveInput() {
@@ -311,6 +312,13 @@ function renderHelpEntries(entries) {
     if (!entry.id || helpRenderedIds.has(entry.id)) return;
     helpRenderedIds.add(entry.id);
     const role = entry.senderRole === 'endUser' ? 'user' : 'agent';
+    if (role === 'user') {
+      const pendingIndex = pendingUserMessages.findIndex(msg => msg === entry.text);
+      if (pendingIndex !== -1) {
+        pendingUserMessages.splice(pendingIndex, 1);
+        return;
+      }
+    }
     appendHelpEntry(role, entry.text);
   });
 }
@@ -355,6 +363,7 @@ async function sendHelpMessage() {
 
   try {
     appendHelpEntry('user', text);
+    pendingUserMessages.push(text);
     helpInput.value = '';
     helpInput.style.height = 'auto';
 
