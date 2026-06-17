@@ -15,16 +15,23 @@ const sendBtnBottom = document.getElementById('sendBtnBottom');
 
 const newChatBtn = document.getElementById('newChatBtn');
 const helpLauncherBtn = document.getElementById('helpLauncherBtn');
+const profileMenuWrap = document.getElementById('profileMenuWrap');
+const profileMenuTrigger = document.getElementById('profileMenuTrigger');
+const profileMenu = document.getElementById('profileMenu');
+const profileGetHelpBtn = document.getElementById('profileGetHelpBtn');
 const helpDrawer = document.getElementById('helpDrawer');
+const helpBackBtn = document.getElementById('helpBackBtn');
 const helpCloseBtn = document.getElementById('helpCloseBtn');
 const helpMenuBtn = document.getElementById('helpMenuBtn');
 const helpMenu = document.getElementById('helpMenu');
 const helpEndBtn = document.getElementById('helpEndBtn');
 const helpMessages = document.getElementById('helpMessages');
-const helpTypingIndicator = document.getElementById('helpTypingIndicator');
 const helpInput = document.getElementById('helpInput');
 const helpSendBtn = document.getElementById('helpSendBtn');
 const helpStatusText = document.getElementById('helpStatusText');
+const helpHomeView = document.getElementById('helpHomeView');
+const helpThreadView = document.getElementById('helpThreadView');
+const helpSendMessageCta = document.getElementById('helpSendMessageCta');
 
 let conversationHistory = [];
 let isWaiting = false;
@@ -34,6 +41,7 @@ let helpSession = null;
 let isHelpOpen = false;
 let helpPollingId = null;
 let awaitingAgentReply = false;
+let isProfileMenuOpen = false;
 const helpRenderedIds = new Set();
 const pendingUserMessages = [];
 
@@ -299,9 +307,68 @@ function setHelpStatus(text) {
   }
 }
 
+function setHelpView(mode) {
+  if (!helpHomeView || !helpThreadView) return;
+  const showThread = mode === 'thread';
+  helpHomeView.hidden = showThread;
+  helpThreadView.hidden = !showThread;
+}
+
+function openProfileMenu() {
+  if (!profileMenu || !profileMenuTrigger) return;
+  profileMenu.classList.add('open');
+  profileMenu.setAttribute('aria-hidden', 'false');
+  profileMenuTrigger.setAttribute('aria-expanded', 'true');
+  isProfileMenuOpen = true;
+}
+
+function closeProfileMenu() {
+  if (!profileMenu || !profileMenuTrigger) return;
+  profileMenu.classList.remove('open');
+  profileMenu.setAttribute('aria-hidden', 'true');
+  profileMenuTrigger.setAttribute('aria-expanded', 'false');
+  isProfileMenuOpen = false;
+}
+
+function toggleProfileMenu() {
+  if (isProfileMenuOpen) {
+    closeProfileMenu();
+  } else {
+    openProfileMenu();
+  }
+}
+
 function setHelpTyping(isVisible) {
-  if (!helpTypingIndicator) return;
-  helpTypingIndicator.hidden = !isVisible;
+  if (!helpMessages) return;
+
+  const existing = helpMessages.querySelector('.help-typing-row');
+  if (!isVisible) {
+    if (existing) existing.remove();
+    return;
+  }
+
+  if (existing) return;
+
+  const row = document.createElement('div');
+  row.className = 'help-entry agent help-typing-row';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'help-entry-bubble help-typing-bubble';
+
+  for (let i = 0; i < 3; i += 1) {
+    const dot = document.createElement('span');
+    dot.className = 'typing-dot';
+    bubble.appendChild(dot);
+  }
+
+  const text = document.createElement('span');
+  text.className = 'typing-text';
+  text.textContent = 'Anthropic Support is typing...';
+  bubble.appendChild(text);
+
+  row.appendChild(bubble);
+  helpMessages.appendChild(row);
+  helpMessages.scrollTop = helpMessages.scrollHeight;
 }
 
 function appendHelpEntry(role, text) {
@@ -453,6 +520,7 @@ function resetHelpConversationState() {
   helpRenderedIds.clear();
   pendingUserMessages.length = 0;
   setHelpTyping(false);
+  setHelpView('home');
   if (helpMessages) {
     helpMessages.textContent = '';
   }
@@ -506,12 +574,16 @@ async function endHelpConversation() {
 
 function closeHelpDrawer() {
   isHelpOpen = false;
+  awaitingAgentReply = false;
   closeHelpMenu();
+  closeProfileMenu();
+  setHelpTyping(false);
+  setHelpView('home');
   if (helpDrawer) {
     helpDrawer.classList.remove('open');
     helpDrawer.setAttribute('aria-hidden', 'true');
   }
-  helpLauncherBtn.classList.remove('active');
+  if (helpLauncherBtn) helpLauncherBtn.classList.remove('active');
   setHelpButtonState('Open Salesforce Help chat', false);
   stopHelpPolling();
 }
@@ -522,11 +594,14 @@ async function openHelpDrawer() {
     helpDrawer.classList.add('open');
     helpDrawer.setAttribute('aria-hidden', 'false');
   }
-  helpLauncherBtn.classList.add('active');
-  setHelpButtonState('Close Help', false);
+  if (helpLauncherBtn) helpLauncherBtn.classList.add('active');
+  setHelpView('home');
+}
 
+async function openHelpThread() {
+  setHelpView('thread');
+  setHelpStatus('Connecting to Anthropic support...');
   if (!helpSession) {
-    setHelpStatus('Connecting to Anthropic support...');
     await initializeHelpSession();
   }
   setHelpTyping(awaitingAgentReply);
@@ -562,8 +637,27 @@ if (helpLauncherBtn) {
   helpLauncherBtn.addEventListener('click', launchHelpChat);
 }
 
+if (profileMenuTrigger) {
+  profileMenuTrigger.addEventListener('click', e => {
+    e.stopPropagation();
+    toggleProfileMenu();
+  });
+}
+
+if (profileGetHelpBtn) {
+  profileGetHelpBtn.addEventListener('click', async e => {
+    e.stopPropagation();
+    closeProfileMenu();
+    await openHelpDrawer();
+  });
+}
+
 if (helpCloseBtn) {
   helpCloseBtn.addEventListener('click', closeHelpDrawer);
+}
+
+if (helpBackBtn) {
+  helpBackBtn.addEventListener('click', closeHelpDrawer);
 }
 
 if (helpMenuBtn) {
@@ -586,6 +680,25 @@ document.addEventListener('click', e => {
     closeHelpMenu();
   }
 });
+
+document.addEventListener('click', e => {
+  if (!profileMenu || !profileMenuTrigger || !profileMenuWrap) return;
+  if (!profileMenuWrap.contains(e.target) && !profileMenuTrigger.contains(e.target)) {
+    closeProfileMenu();
+  }
+});
+
+if (helpSendMessageCta) {
+  helpSendMessageCta.addEventListener('click', async () => {
+    try {
+      await openHelpThread();
+    } catch (err) {
+      console.error('Failed to open help thread:', err);
+      setHelpStatus('Unable to connect right now');
+      setHelpView('home');
+    }
+  });
+}
 
 if (helpInput && helpSendBtn) {
   helpInput.addEventListener('input', () => {

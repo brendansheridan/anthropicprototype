@@ -44,14 +44,20 @@
         <button class="sidebar-icon-btn has-badge" title="Download">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         </button>
-        <button class="sidebar-icon-btn help-nav-btn" id="helpLauncherBtn" title="Open Salesforce Help chat">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"></circle>
-            <path d="M9.09 9a3 3 0 0 1 5.82 1c0 2-3 2-3 4"></path>
-            <line x1="12" y1="17" x2="12.01" y2="17"></line>
-          </svg>
-        </button>
-        <div class="sidebar-avatar">B</div>
+        <div class="profile-menu-wrap" id="profileMenuWrap">
+          <button class="sidebar-avatar profile-trigger" id="profileMenuTrigger" title="Profile menu">B</button>
+          <div class="profile-menu" id="profileMenu" aria-hidden="true">
+            <div class="profile-menu-email">brendansheridan@gmail.com</div>
+            <button class="profile-menu-item" type="button">Settings</button>
+            <button class="profile-menu-item" type="button">Language</button>
+            <button class="profile-menu-item profile-menu-item-help" id="profileGetHelpBtn" type="button">Get Help</button>
+            <button class="profile-menu-item" type="button">Upgrade Plan</button>
+            <button class="profile-menu-item" type="button">Get apps and extensions</button>
+            <button class="profile-menu-item" type="button">Gift Claude</button>
+            <button class="profile-menu-item" type="button">Learn more</button>
+            <button class="profile-menu-item" type="button">Log out</button>
+          </div>
+        </div>
       </div>
     </aside>
 
@@ -180,13 +186,18 @@
 
       <aside class="help-drawer" id="helpDrawer" aria-hidden="true">
         <div class="help-drawer-header">
+          <button class="sidebar-icon-btn help-header-btn" id="helpBackBtn" title="Back">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+          </button>
           <div class="help-title-group">
-            <strong>Help</strong>
-            <span id="helpStatusText">Start an Anthropic support conversation</span>
+            <strong>Fin AI Agent</strong>
+            <span>Contact support</span>
           </div>
           <div class="help-header-actions">
             <div class="help-menu-wrap">
-              <button class="sidebar-icon-btn" id="helpMenuBtn" title="More options" aria-haspopup="true" aria-expanded="false">
+              <button class="sidebar-icon-btn help-header-btn" id="helpMenuBtn" title="More options" aria-haspopup="true" aria-expanded="false">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <circle cx="12" cy="5" r="1.5"></circle>
                   <circle cx="12" cy="12" r="1.5"></circle>
@@ -197,7 +208,7 @@
                 <button class="help-end-btn" id="helpEndBtn" title="End current conversation">End Conversation</button>
               </div>
             </div>
-            <button class="sidebar-icon-btn" id="helpCloseBtn" title="Close Help">
+            <button class="sidebar-icon-btn help-header-btn" id="helpCloseBtn" title="Close Help">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="18" y1="6" x2="6" y2="18"></line>
                 <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -205,21 +216,51 @@
             </button>
           </div>
         </div>
-        <div class="help-drawer-messages" id="helpMessages"></div>
-        <div class="help-typing-indicator" id="helpTypingIndicator" aria-live="polite" hidden>
-          <span class="typing-dot"></span>
-          <span class="typing-dot"></span>
-          <span class="typing-dot"></span>
-          <span class="typing-text">Anthropic Support is typing...</span>
-        </div>
-        <div class="help-drawer-input">
-          <textarea id="helpInput" placeholder="Type your help message..." rows="1"></textarea>
-          <button class="send-btn" id="helpSendBtn" disabled title="Send help message">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="22" y1="2" x2="11" y2="13"></line>
-              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-            </svg>
+        <div class="help-home-view" id="helpHomeView">
+          <div class="help-home-hero">
+            <h3>Need support?<br>How can we help?</h3>
+          </div>
+          <div class="help-status-card">
+            <div class="help-status-dot"></div>
+            <div>
+              <strong>Status: All Systems Operational</strong>
+              <p>Updated Jun 17, 14:13 UTC</p>
+            </div>
+          </div>
+          <button class="help-home-action" id="helpSendMessageCta" type="button">
+            <span>Send us a message</span>
+            <span>›</span>
           </button>
+          <div class="help-home-search">
+            <div class="help-home-search-header">
+              <span>Search for help</span>
+              <span>⌕</span>
+            </div>
+            <button class="help-home-link" type="button">How to get support</button>
+            <button class="help-home-link" type="button">How can I delete my Claude account?</button>
+            <button class="help-home-link" type="button">Use Claude Code within your Pro or Max Plan</button>
+            <button class="help-home-link" type="button">Usage limit best practices</button>
+          </div>
+          <div class="help-bottom-nav">
+            <button class="help-bottom-nav-item active" type="button">Home</button>
+            <button class="help-bottom-nav-item" type="button">Messages</button>
+            <button class="help-bottom-nav-item" type="button">Help</button>
+          </div>
+        </div>
+        <div class="help-thread-view" id="helpThreadView" hidden>
+          <div class="help-status-row">
+            <span id="helpStatusText">Start an Anthropic support conversation</span>
+          </div>
+          <div class="help-drawer-messages" id="helpMessages"></div>
+          <div class="help-drawer-input">
+            <textarea id="helpInput" placeholder="Type your help message..." rows="1"></textarea>
+            <button class="send-btn" id="helpSendBtn" disabled title="Send help message">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </div>
         </div>
       </aside>
     </main>
