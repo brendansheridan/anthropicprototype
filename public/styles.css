@@ -493,6 +493,10 @@ html, body {
   line-height: 1.45;
 }
 
+.help-thread-view .help-status-row {
+  margin-top: 8px;
+}
+
 .help-case-view,
 .help-article-view,
 .help-case-lookup-view,
