@@ -168,30 +168,37 @@ async function getCasesByContactId(contactId) {
 async function searchKnowledgeArticles(searchTerm) {
   const normalized = String(searchTerm || '').trim().replace(/'/g, "\\'");
   const whereClause = normalized
-    ? `AND (Title LIKE '%${normalized}%' OR Summary LIKE '%${normalized}%')`
+    ? `AND (Title LIKE '%${normalized}%' OR Summary LIKE '%${normalized}%' OR FAQ_Answer__c LIKE '%${normalized}%')`
     : '';
   const objectCandidates = ['Knowledge__kav', 'KnowledgeArticleVersion'];
   let lastError = null;
+  const fieldCandidates = [
+    'Id,Title,Summary,FAQ_Answer__c,LastPublishedDate',
+    'Id,Title,Summary,LastPublishedDate'
+  ];
 
   for (const objectName of objectCandidates) {
-    try {
-      const soql = [
-        'SELECT Id,Title,Summary,LastPublishedDate',
-        `FROM ${objectName}`,
-        "WHERE PublishStatus='Online' AND Language='en_US'",
-        whereClause,
-        'ORDER BY LastPublishedDate DESC LIMIT 8'
-      ].join(' ');
+    for (const fields of fieldCandidates) {
+      try {
+        const soql = [
+          `SELECT ${fields}`,
+          `FROM ${objectName}`,
+          "WHERE PublishStatus='Online' AND Language='en_US'",
+          whereClause,
+          'ORDER BY LastPublishedDate DESC LIMIT 8'
+        ].join(' ');
 
-      const records = await queryRecords(soql);
-      return records.map(row => ({
-        id: row.Id,
-        title: row.Title,
-        summary: row.Summary,
-        lastPublishedDate: row.LastPublishedDate
-      }));
-    } catch (err) {
-      lastError = err;
+        const records = await queryRecords(soql);
+        return records.map(row => ({
+          id: row.Id,
+          title: row.Title,
+          summary: row.Summary,
+          faqAnswer: row.FAQ_Answer__c || '',
+          lastPublishedDate: row.LastPublishedDate
+        }));
+      } catch (err) {
+        lastError = err;
+      }
     }
   }
 

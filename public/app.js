@@ -366,11 +366,12 @@ function setHelpView(mode) {
 
 function openKnowledgeArticle(article) {
   if (!article) return;
+  const body = article.faqAnswer || article.summary || 'Article preview is not available for this entry yet.';
   if (helpArticleTitle) {
     helpArticleTitle.textContent = article.title || 'Help article';
   }
   if (helpArticleBody) {
-    helpArticleBody.textContent = article.summary || 'Article preview is not available for this entry yet.';
+    helpArticleBody.textContent = body;
   }
   if (helpArticleMeta) {
     const stamp = article.lastPublishedDate
@@ -490,7 +491,7 @@ function renderKnowledgeResults(articles) {
     row.type = 'button';
     row.className = 'help-home-link';
     row.textContent = article.title || 'Untitled article';
-    row.title = article.summary || '';
+    row.title = article.faqAnswer || article.summary || '';
     row.addEventListener('click', () => openKnowledgeArticle(article));
     helpKnowledgeResults.appendChild(row);
   });
