@@ -47,10 +47,6 @@ Required variables:
 - `SF_MESSAGING_DEPLOYMENT_NAME` — Embedded Service Deployment developer name
 - `SF_MESSAGING_URL` — SCRT URL from your deployment snippet
 
-Optional:
-- `SF_MESSAGING_SCRIPT_URL` — override embedded bootstrap script URL
-- `SF_MESSAGING_LANGUAGE` — default `en_US`
-
 ### 4. Run locally
 
 ```bash
@@ -79,20 +75,20 @@ git push heroku main
 4. If customer requests follow-up → Claude creates a **real Task in Salesforce**
 5. Claude wraps up with case reference number
 
-## Embedded Help Chat
+## Custom Help Chat (Messaging API)
 
-The top-right `Help` button in the Claude UI now initializes Salesforce Embedded Messaging and opens the help chat window.
+The left-nav `Help` button opens a Claude-styled custom help drawer backed by Salesforce Messaging for In-App and Web APIs.
 
 How it works:
-1. Browser calls `GET /api/messaging/config`
-2. Server returns safe client config from environment variables
-3. Frontend loads the Embedded Messaging bootstrap script
-4. Frontend initializes `embeddedservice_bootstrap` and launches chat
+1. Browser calls `POST /api/messaging/session` to create an unauthenticated messaging session
+2. Server requests `accessToken` and starts a new conversation via Salesforce `iamessage` APIs
+3. Browser sends messages using `POST /api/messaging/message`
+4. Browser refreshes conversation entries via `POST /api/messaging/messages`
 
-If Help does not open:
+If Help does not connect:
 - Confirm `SF_MESSAGING_ORG_ID`, `SF_MESSAGING_DEPLOYMENT_NAME`, and `SF_MESSAGING_URL` are set
-- Verify the deployment is active in Salesforce
-- If your org uses a different bootstrap script path, set `SF_MESSAGING_SCRIPT_URL`
+- Verify the Custom Client deployment is active in Salesforce and linked to your channel
+- Confirm the SCRT URL matches the deployment snippet
 
 ## File Structure
 

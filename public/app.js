@@ -15,13 +15,21 @@ const sendBtnBottom = document.getElementById('sendBtnBottom');
 
 const newChatBtn = document.getElementById('newChatBtn');
 const helpLauncherBtn = document.getElementById('helpLauncherBtn');
+const helpDrawer = document.getElementById('helpDrawer');
+const helpCloseBtn = document.getElementById('helpCloseBtn');
+const helpMessages = document.getElementById('helpMessages');
+const helpInput = document.getElementById('helpInput');
+const helpSendBtn = document.getElementById('helpSendBtn');
+const helpStatusText = document.getElementById('helpStatusText');
 
 let conversationHistory = [];
 let isWaiting = false;
 let inConversation = false;
 let isHelpLoading = false;
-let isHelpReady = false;
-let helpReadyPromise = null;
+let helpSession = null;
+let isHelpOpen = false;
+let helpPollingId = null;
+const helpRenderedIds = new Set();
 
 // Get active input
 function getActiveInput() {
@@ -279,113 +287,196 @@ function setHelpButtonState(label, loading) {
   helpLauncherBtn.disabled = loading;
 }
 
-async function fetchMessagingConfig() {
-  const response = await fetch('/api/messaging/config');
+function setHelpStatus(text) {
+  if (helpStatusText) {
+    helpStatusText.textContent = text;
+  }
+}
+
+function appendHelpEntry(role, text) {
+  if (!helpMessages || !text) return;
+  const row = document.createElement('div');
+  row.className = `help-entry ${role}`;
+  const bubble = document.createElement('div');
+  bubble.className = 'help-entry-bubble';
+  bubble.textContent = text;
+  row.appendChild(bubble);
+  helpMessages.appendChild(row);
+  helpMessages.scrollTop = helpMessages.scrollHeight;
+}
+
+function renderHelpEntries(entries) {
+  if (!entries || !Array.isArray(entries)) return;
+  entries.forEach(entry => {
+    if (!entry.id || helpRenderedIds.has(entry.id)) return;
+    helpRenderedIds.add(entry.id);
+    const role = entry.senderRole === 'endUser' ? 'user' : 'agent';
+    appendHelpEntry(role, entry.text);
+  });
+}
+
+async function initializeHelpSession() {
+  const response = await fetch('/api/messaging/session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  });
   const data = await response.json();
   if (!response.ok || data.error) {
-    throw new Error(data.error || 'Failed to load Salesforce messaging configuration.');
+    throw new Error(data.error || 'Failed to start help session.');
   }
-  return data;
+  helpSession = data;
+  setHelpStatus('Connected to Salesforce support');
 }
 
-function loadEmbeddedMessagingScript(scriptUrl) {
-  return new Promise((resolve, reject) => {
-    const existingScript = document.querySelector('script[data-embedded-messaging="true"]');
-    if (existingScript) {
-      if (window.embeddedservice_bootstrap) {
-        resolve();
-      } else {
-        existingScript.addEventListener('load', resolve, { once: true });
-        existingScript.addEventListener('error', () => reject(new Error('Failed to load Salesforce messaging script.')), { once: true });
-      }
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.src = scriptUrl;
-    script.async = true;
-    script.dataset.embeddedMessaging = 'true';
-    script.addEventListener('load', resolve, { once: true });
-    script.addEventListener('error', () => reject(new Error('Failed to load Salesforce messaging script.')), { once: true });
-    document.head.appendChild(script);
+async function fetchHelpMessages() {
+  if (!helpSession) return;
+  const response = await fetch('/api/messaging/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      accessToken: helpSession.accessToken,
+      conversationId: helpSession.conversationId
+    })
   });
+  const data = await response.json();
+  if (!response.ok || data.error) {
+    throw new Error(data.error || 'Failed to load help messages.');
+  }
+  renderHelpEntries(data.entries || []);
 }
 
-function waitForEmbeddedMessagingReady() {
-  return new Promise(resolve => {
-    if (
-      window.embeddedservice_bootstrap &&
-      window.embeddedservice_bootstrap.utilAPI &&
-      typeof window.embeddedservice_bootstrap.utilAPI.launchChat === 'function'
-    ) {
-      resolve();
-      return;
-    }
-    window.addEventListener('onEmbeddedMessagingReady', resolve, { once: true });
-  });
-}
+async function sendHelpMessage() {
+  const text = helpInput.value.trim();
+  if (!text || !helpSession || isHelpLoading) return;
 
-async function bootstrapEmbeddedMessaging() {
-  if (isHelpReady) return;
-  if (helpReadyPromise) return helpReadyPromise;
-
-  helpReadyPromise = (async () => {
-    const config = await fetchMessagingConfig();
-    const scriptUrl = config.scriptUrl || `${config.url}/assets/js/bootstrap.min.js`;
-
-    await loadEmbeddedMessagingScript(scriptUrl);
-
-    const bootstrap = window.embeddedservice_bootstrap;
-    if (!bootstrap || typeof bootstrap.init !== 'function') {
-      throw new Error('Salesforce Embedded Messaging bootstrap API is unavailable.');
-    }
-
-    try {
-      bootstrap.settings.language = config.language || 'en_US';
-      bootstrap.init(config.organizationId, config.developerName, config.url, config.snippetConfig || {});
-    } catch (initErr) {
-      throw new Error(initErr.message || 'Failed to initialize Salesforce Embedded Messaging.');
-    }
-
-    await waitForEmbeddedMessagingReady();
-    isHelpReady = true;
-  })();
+  isHelpLoading = true;
+  setHelpButtonState('Sending help message', true);
+  helpSendBtn.disabled = true;
 
   try {
-    await helpReadyPromise;
+    appendHelpEntry('user', text);
+    helpInput.value = '';
+    helpInput.style.height = 'auto';
+
+    const response = await fetch('/api/messaging/message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        accessToken: helpSession.accessToken,
+        conversationId: helpSession.conversationId,
+        message: text
+      })
+    });
+    const data = await response.json();
+    if (!response.ok || data.error) {
+      throw new Error(data.error || 'Failed to send help message.');
+    }
+    await fetchHelpMessages();
+  } catch (err) {
+    console.error('Help message send failed:', err);
+    setHelpStatus('Failed to send message');
+    appendHelpEntry('agent', 'Sorry, I could not send that message. Please try again.');
   } finally {
-    helpReadyPromise = null;
+    isHelpLoading = false;
+    setHelpButtonState(isHelpOpen ? 'Close Help' : 'Open Salesforce Help chat', false);
+    helpSendBtn.disabled = !helpInput.value.trim();
   }
+}
+
+function startHelpPolling() {
+  stopHelpPolling();
+  helpPollingId = setInterval(async () => {
+    if (!isHelpOpen || !helpSession) return;
+    try {
+      await fetchHelpMessages();
+    } catch (err) {
+      console.error('Help polling failed:', err);
+    }
+  }, 3000);
+}
+
+function stopHelpPolling() {
+  if (helpPollingId) {
+    clearInterval(helpPollingId);
+    helpPollingId = null;
+  }
+}
+
+function closeHelpDrawer() {
+  isHelpOpen = false;
+  if (helpDrawer) {
+    helpDrawer.classList.remove('open');
+    helpDrawer.setAttribute('aria-hidden', 'true');
+  }
+  helpLauncherBtn.classList.remove('active');
+  setHelpButtonState('Open Salesforce Help chat', false);
+  stopHelpPolling();
+}
+
+async function openHelpDrawer() {
+  isHelpOpen = true;
+  if (helpDrawer) {
+    helpDrawer.classList.add('open');
+    helpDrawer.setAttribute('aria-hidden', 'false');
+  }
+  helpLauncherBtn.classList.add('active');
+  setHelpButtonState('Close Help', false);
+
+  if (!helpSession) {
+    setHelpStatus('Connecting to Salesforce support...');
+    await initializeHelpSession();
+    appendHelpEntry('agent', 'You are connected. How can we help today?');
+  }
+  await fetchHelpMessages();
+  startHelpPolling();
 }
 
 async function launchHelpChat() {
   if (isHelpLoading) return;
   isHelpLoading = true;
-  setHelpButtonState('Opening...', true);
+  setHelpButtonState(isHelpOpen ? 'Closing help' : 'Opening help', true);
 
   try {
-    if (!isHelpReady) {
-      await bootstrapEmbeddedMessaging();
-    }
-    if (
-      window.embeddedservice_bootstrap &&
-      window.embeddedservice_bootstrap.utilAPI &&
-      typeof window.embeddedservice_bootstrap.utilAPI.launchChat === 'function'
-    ) {
-      window.embeddedservice_bootstrap.utilAPI.launchChat();
+    if (isHelpOpen) {
+      closeHelpDrawer();
     } else {
-      throw new Error('Salesforce chat launcher API is unavailable.');
+      await openHelpDrawer();
     }
-    setHelpButtonState('Help', false);
   } catch (err) {
-    console.error('Help chat initialization failed:', err);
+    console.error('Help chat failed:', err);
+    setHelpStatus('Unable to connect right now');
     setHelpButtonState('Retry Help', false);
-    alert('Unable to open help chat right now. Please try again.');
   } finally {
     isHelpLoading = false;
+    if (!helpLauncherBtn.classList.contains('loading')) {
+      setHelpButtonState(isHelpOpen ? 'Close Help' : 'Open Salesforce Help chat', false);
+    }
   }
 }
 
 if (helpLauncherBtn) {
   helpLauncherBtn.addEventListener('click', launchHelpChat);
+}
+
+if (helpCloseBtn) {
+  helpCloseBtn.addEventListener('click', closeHelpDrawer);
+}
+
+if (helpInput && helpSendBtn) {
+  helpInput.addEventListener('input', () => {
+    helpInput.style.height = 'auto';
+    helpInput.style.height = Math.min(helpInput.scrollHeight, 120) + 'px';
+    helpSendBtn.disabled = !helpInput.value.trim() || !helpSession || isHelpLoading;
+  });
+
+  helpInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (helpInput.value.trim() && helpSession && !isHelpLoading) {
+        sendHelpMessage();
+      }
+    }
+  });
+
+  helpSendBtn.addEventListener('click', sendHelpMessage);
 }

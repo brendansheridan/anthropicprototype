@@ -102,9 +102,154 @@ async function updateContact(contactId, data) {
   return { success: true };
 }
 
+function getMessagingHost() {
+  const rawUrl = process.env.SF_MESSAGING_URL || '';
+  return rawUrl
+    .replace(/^https?:\/\//, '')
+    .replace(/\/+$/, '');
+}
+
+async function initializeMessagingSession() {
+  const host = getMessagingHost();
+  const orgId = process.env.SF_MESSAGING_ORG_ID;
+  const developerName = process.env.SF_MESSAGING_DEPLOYMENT_NAME;
+
+  if (!host || !orgId || !developerName) {
+    throw new Error('Missing messaging config. Set SF_MESSAGING_URL, SF_MESSAGING_ORG_ID, SF_MESSAGING_DEPLOYMENT_NAME.');
+  }
+
+  const tokenResponse = await fetch(`https://${host}/iamessage/api/v2/authorization/unauthenticated/access-token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      orgId,
+      esDeveloperName: developerName,
+      capabilitiesVersion: '1',
+      platform: 'Web',
+      context: {
+        appName: 'AnthropicPrototype',
+        clientVersion: '1.0.0'
+      }
+    })
+  });
+
+  if (!tokenResponse.ok) {
+    const tokenError = await tokenResponse.text();
+    throw new Error(`Messaging token request failed (${tokenResponse.status}): ${tokenError}`);
+  }
+
+  const tokenData = await tokenResponse.json();
+  const accessToken = tokenData.accessToken;
+  const conversationId = `${Date.now()}-${Math.random().toString(16).slice(2)}`.toLowerCase();
+
+  const conversationResponse = await fetch(`https://${host}/iamessage/api/v2/conversation`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      conversationId,
+      esDeveloperName: developerName
+    })
+  });
+
+  if (!conversationResponse.ok) {
+    const conversationError = await conversationResponse.text();
+    throw new Error(`Messaging conversation start failed (${conversationResponse.status}): ${conversationError}`);
+  }
+
+  return {
+    accessToken,
+    conversationId,
+    lastEventId: tokenData.lastEventId || null
+  };
+}
+
+async function sendMessagingMessage({ accessToken, conversationId, text }) {
+  const host = getMessagingHost();
+  const developerName = process.env.SF_MESSAGING_DEPLOYMENT_NAME;
+
+  if (!accessToken || !conversationId || !text) {
+    throw new Error('Missing message payload.');
+  }
+
+  const response = await fetch(`https://${host}/iamessage/api/v2/conversation/${conversationId}/message`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      message: {
+        id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        messageType: 'StaticContentMessage',
+        staticContent: {
+          formatType: 'Text',
+          text
+        }
+      },
+      esDeveloperName: developerName,
+      isNewMessagingSession: false,
+      language: ''
+    })
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Messaging send failed (${response.status}): ${error}`);
+  }
+}
+
+async function getMessagingMessages({ accessToken, conversationId }) {
+  const host = getMessagingHost();
+
+  if (!accessToken || !conversationId) {
+    throw new Error('Missing message query payload.');
+  }
+
+  const response = await fetch(
+    `https://${host}/iamessage/api/v2/conversation/${conversationId}/entries?limit=50&direction=FromEnd`,
+    {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`
+      }
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Messaging fetch failed (${response.status}): ${error}`);
+  }
+
+  const data = await response.json();
+  const conversationEntries = Array.isArray(data.conversationEntries) ? data.conversationEntries : [];
+
+  const parsed = conversationEntries
+    .filter(entry => entry.entryType === 'Message')
+    .map(entry => {
+      const payload = entry.entryPayload && entry.entryPayload.abstractMessage;
+      const text = payload && payload.staticContent ? payload.staticContent.text : null;
+      return {
+        id: payload && payload.id ? payload.id : `${entry.serverTimestamp || Date.now()}`,
+        senderRole: (entry.sender && entry.sender.role) || 'system',
+        text,
+        timestamp: entry.serverTimestamp || entry.clientTimestamp || 0
+      };
+    })
+    .filter(entry => !!entry.text)
+    .sort((a, b) => a.timestamp - b.timestamp);
+
+  return parsed;
+}
+
 module.exports = {
   createCase,
   createTask,
   queryContact,
-  updateContact
+  updateContact,
+  initializeMessagingSession,
+  sendMessagingMessage,
+  getMessagingMessages
 };

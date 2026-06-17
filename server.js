@@ -107,28 +107,47 @@ app.post('/api/concierge/chat', (req, res) => {
   }
 });
 
-// Embedded Messaging client config (safe for browser use)
-app.get('/api/messaging/config', (req, res) => {
-  const organizationId = process.env.SF_MESSAGING_ORG_ID;
-  const developerName = process.env.SF_MESSAGING_DEPLOYMENT_NAME;
-  const url = process.env.SF_MESSAGING_URL;
-
-  if (!organizationId || !developerName || !url) {
-    return res.status(500).json({
-      error: 'Missing messaging configuration. Set SF_MESSAGING_ORG_ID, SF_MESSAGING_DEPLOYMENT_NAME, and SF_MESSAGING_URL.'
-    });
+// Custom Messaging API routes for Claude-styled help drawer
+app.post('/api/messaging/session', async (req, res) => {
+  try {
+    const session = await sf.initializeMessagingSession();
+    res.json(session);
+  } catch (err) {
+    console.error('Messaging session init error:', err.message);
+    res.status(500).json({ error: 'Unable to initialize messaging session.' });
   }
+});
 
-  res.json({
-    organizationId,
-    developerName,
-    url,
-    scriptUrl: process.env.SF_MESSAGING_SCRIPT_URL || `${url}/assets/js/bootstrap.min.js`,
-    language: process.env.SF_MESSAGING_LANGUAGE || 'en_US',
-    snippetConfig: {
-      scrt2URL: url
+app.post('/api/messaging/message', async (req, res) => {
+  try {
+    const { accessToken, conversationId, message } = req.body || {};
+    if (!accessToken || !conversationId || !message) {
+      return res.status(400).json({ error: 'accessToken, conversationId, and message are required.' });
     }
-  });
+    await sf.sendMessagingMessage({
+      accessToken,
+      conversationId,
+      text: message
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Messaging send error:', err.message);
+    res.status(500).json({ error: 'Unable to send messaging chat message.' });
+  }
+});
+
+app.post('/api/messaging/messages', async (req, res) => {
+  try {
+    const { accessToken, conversationId } = req.body || {};
+    if (!accessToken || !conversationId) {
+      return res.status(400).json({ error: 'accessToken and conversationId are required.' });
+    }
+    const entries = await sf.getMessagingMessages({ accessToken, conversationId });
+    res.json({ entries });
+  } catch (err) {
+    console.error('Messaging fetch error:', err.message);
+    res.status(500).json({ error: 'Unable to load messaging chat messages.' });
+  }
 });
 
 // Concierge page
