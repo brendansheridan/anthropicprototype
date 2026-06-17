@@ -519,11 +519,37 @@ html, body {
   color: #6a717e;
 }
 
-.help-article-content p {
+.help-article-body {
   font-size: 13px;
   line-height: 1.5;
   color: #3b4250;
-  white-space: pre-wrap;
+}
+
+.help-article-body h1,
+.help-article-body h2,
+.help-article-body h3,
+.help-article-body h4 {
+  margin: 10px 0 6px;
+  color: #252b37;
+  line-height: 1.3;
+}
+
+.help-article-body p {
+  margin: 6px 0;
+}
+
+.help-article-body ul,
+.help-article-body ol {
+  margin: 6px 0 6px 18px;
+}
+
+.help-article-body li {
+  margin: 4px 0;
+}
+
+.help-article-body a {
+  color: #0b6d8a;
+  text-decoration: underline;
 }
 
 .help-subview-header {

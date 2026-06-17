@@ -371,7 +371,7 @@ function openKnowledgeArticle(article) {
     helpArticleTitle.textContent = article.title || 'Help article';
   }
   if (helpArticleBody) {
-    helpArticleBody.textContent = body;
+    renderArticleContent(helpArticleBody, body);
   }
   if (helpArticleMeta) {
     const stamp = article.lastPublishedDate
@@ -380,6 +380,73 @@ function openKnowledgeArticle(article) {
     helpArticleMeta.textContent = stamp;
   }
   setHelpView('article');
+}
+
+function renderArticleContent(container, rawContent) {
+  if (!container) return;
+  container.textContent = '';
+
+  const decoded = decodeHtmlEntities(String(rawContent || ''));
+  const parser = new DOMParser();
+  const parsed = parser.parseFromString(decoded, 'text/html');
+  const fragment = document.createDocumentFragment();
+
+  parsed.body.childNodes.forEach(node => {
+    const safeNode = sanitizeArticleNode(node);
+    if (safeNode) fragment.appendChild(safeNode);
+  });
+
+  if (!fragment.childNodes.length) {
+    container.textContent = decoded;
+    return;
+  }
+
+  container.appendChild(fragment);
+}
+
+function sanitizeArticleNode(node) {
+  if (node.nodeType === Node.TEXT_NODE) {
+    return document.createTextNode(node.textContent || '');
+  }
+  if (node.nodeType !== Node.ELEMENT_NODE) return null;
+
+  const allowedTags = new Set([
+    'p', 'br', 'strong', 'em', 'b', 'i', 'u', 'a',
+    'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4',
+    'code', 'pre', 'blockquote'
+  ]);
+  const tag = node.tagName.toLowerCase();
+  if (!allowedTags.has(tag)) {
+    const passthrough = document.createDocumentFragment();
+    node.childNodes.forEach(child => {
+      const safeChild = sanitizeArticleNode(child);
+      if (safeChild) passthrough.appendChild(safeChild);
+    });
+    return passthrough;
+  }
+
+  const el = document.createElement(tag);
+  if (tag === 'a') {
+    const rawHref = node.getAttribute('href') || '';
+    const lowerHref = rawHref.trim().toLowerCase();
+    if (lowerHref.startsWith('http://') || lowerHref.startsWith('https://') || lowerHref.startsWith('mailto:') || lowerHref.startsWith('#')) {
+      el.setAttribute('href', rawHref);
+    }
+    el.setAttribute('target', '_blank');
+    el.setAttribute('rel', 'noopener noreferrer');
+  }
+
+  node.childNodes.forEach(child => {
+    const safeChild = sanitizeArticleNode(child);
+    if (safeChild) el.appendChild(safeChild);
+  });
+  return el;
+}
+
+function decodeHtmlEntities(value) {
+  const textarea = document.createElement('textarea');
+  textarea.innerHTML = value;
+  return textarea.value;
 }
 
 function setHighVolumeBannerVisible(visible) {
