@@ -21,6 +21,7 @@ const helpMenuBtn = document.getElementById('helpMenuBtn');
 const helpMenu = document.getElementById('helpMenu');
 const helpEndBtn = document.getElementById('helpEndBtn');
 const helpMessages = document.getElementById('helpMessages');
+const helpTypingIndicator = document.getElementById('helpTypingIndicator');
 const helpInput = document.getElementById('helpInput');
 const helpSendBtn = document.getElementById('helpSendBtn');
 const helpStatusText = document.getElementById('helpStatusText');
@@ -32,6 +33,7 @@ let isHelpLoading = false;
 let helpSession = null;
 let isHelpOpen = false;
 let helpPollingId = null;
+let awaitingAgentReply = false;
 const helpRenderedIds = new Set();
 const pendingUserMessages = [];
 
@@ -297,6 +299,11 @@ function setHelpStatus(text) {
   }
 }
 
+function setHelpTyping(isVisible) {
+  if (!helpTypingIndicator) return;
+  helpTypingIndicator.hidden = !isVisible;
+}
+
 function appendHelpEntry(role, text) {
   if (!helpMessages || !text) return;
   const row = document.createElement('div');
@@ -324,6 +331,10 @@ function renderHelpEntries(entries) {
       }
     }
     appendHelpEntry(role, entry.text);
+    if (role === 'agent') {
+      awaitingAgentReply = false;
+      setHelpTyping(false);
+    }
   });
 }
 
@@ -337,7 +348,7 @@ async function initializeHelpSession() {
     throw new Error(data.error || 'Failed to start help session.');
   }
   helpSession = data;
-  setHelpStatus('Connected to Salesforce support');
+  setHelpStatus('Connected to Anthropic support');
 }
 
 async function fetchHelpMessages() {
@@ -384,6 +395,8 @@ async function sendHelpMessage() {
     if (!response.ok || data.error) {
       throw new Error(data.error || 'Failed to send help message.');
     }
+    awaitingAgentReply = true;
+    setHelpTyping(true);
     await fetchHelpMessages();
   } catch (err) {
     console.error('Help message send failed:', err);
@@ -436,8 +449,10 @@ function toggleHelpMenu() {
 
 function resetHelpConversationState() {
   helpSession = null;
+  awaitingAgentReply = false;
   helpRenderedIds.clear();
   pendingUserMessages.length = 0;
+  setHelpTyping(false);
   if (helpMessages) {
     helpMessages.textContent = '';
   }
@@ -449,7 +464,7 @@ function resetHelpConversationState() {
   if (helpSendBtn) {
     helpSendBtn.disabled = true;
   }
-  setHelpStatus('Start a support conversation');
+  setHelpStatus('Start an Anthropic support conversation');
 }
 
 async function endHelpConversation() {
@@ -511,10 +526,10 @@ async function openHelpDrawer() {
   setHelpButtonState('Close Help', false);
 
   if (!helpSession) {
-    setHelpStatus('Connecting to Salesforce support...');
+    setHelpStatus('Connecting to Anthropic support...');
     await initializeHelpSession();
-    appendHelpEntry('agent', 'You are connected. How can we help today?');
   }
+  setHelpTyping(awaitingAgentReply);
   await fetchHelpMessages();
   if (helpEndBtn) helpEndBtn.disabled = false;
   startHelpPolling();

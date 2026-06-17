@@ -182,7 +182,7 @@
         <div class="help-drawer-header">
           <div class="help-title-group">
             <strong>Help</strong>
-            <span id="helpStatusText">Start a support conversation</span>
+            <span id="helpStatusText">Start an Anthropic support conversation</span>
           </div>
           <div class="help-header-actions">
             <div class="help-menu-wrap">
@@ -206,6 +206,12 @@
           </div>
         </div>
         <div class="help-drawer-messages" id="helpMessages"></div>
+        <div class="help-typing-indicator" id="helpTypingIndicator" aria-live="polite" hidden>
+          <span class="typing-dot"></span>
+          <span class="typing-dot"></span>
+          <span class="typing-dot"></span>
+          <span class="typing-text">Anthropic Support is typing...</span>
+        </div>
         <div class="help-drawer-input">
           <textarea id="helpInput" placeholder="Type your help message..." rows="1"></textarea>
           <button class="send-btn" id="helpSendBtn" disabled title="Send help message">
