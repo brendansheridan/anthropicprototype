@@ -42,6 +42,7 @@ const helpArticleBackBtn = document.getElementById('helpArticleBackBtn');
 const helpArticleExpandBtn = document.getElementById('helpArticleExpandBtn');
 const helpCaseLookupBackBtn = document.getElementById('helpCaseLookupBackBtn');
 const helpCaseDetailBackBtn = document.getElementById('helpCaseDetailBackBtn');
+const helpCaseExpandBtn = document.getElementById('helpCaseExpandBtn');
 const helpCaseForm = document.getElementById('helpCaseForm');
 const helpCaseType = document.getElementById('helpCaseType');
 const helpCaseSubject = document.getElementById('helpCaseSubject');
@@ -365,13 +366,14 @@ function setHelpView(mode) {
     }
   });
 
+  const isExpandableMode = mode === 'article' || mode === 'detail';
   if (helpArticleExpandBtn) {
-    helpArticleExpandBtn.hidden = mode !== 'article';
+    helpArticleExpandBtn.hidden = !isExpandableMode;
   }
   if (helpDrawer) {
-    helpDrawer.classList.toggle('article-mode', mode === 'article');
+    helpDrawer.classList.toggle('expandable-mode', isExpandableMode);
   }
-  if (mode !== 'article') {
+  if (!isExpandableMode) {
     setHelpArticleExpanded(false);
   }
 }
@@ -513,7 +515,16 @@ async function loadCaseDetails(caseRef) {
     helpCaseDetailTitle.textContent = `Case ${activeCase.caseNumber || activeCase.id}`;
   }
   if (helpCaseDetailMeta) {
-    helpCaseDetailMeta.textContent = `${activeCase.subject || 'No subject'} • ${activeCase.status || 'Unknown'} • ${activeCase.priority || 'Unknown priority'}`;
+    const createdLabel = activeCase.createdDate ? new Date(activeCase.createdDate).toLocaleString() : 'Unknown';
+    helpCaseDetailMeta.textContent = [
+      `Subject: ${activeCase.subject || 'No subject'}`,
+      `Type: ${activeCase.type || 'Not set'}`,
+      `Status: ${activeCase.status || 'Unknown'}`,
+      `Priority: ${activeCase.priority || 'Unknown'}`,
+      `Origin: ${activeCase.origin || 'Unknown'}`,
+      `Created: ${createdLabel}`,
+      `Description: ${activeCase.description || 'No description provided.'}`
+    ].join('\n');
   }
   renderCaseComments(data.comments || []);
 }
@@ -1027,6 +1038,12 @@ if (helpArticleBackBtn) {
 
 if (helpArticleExpandBtn) {
   helpArticleExpandBtn.addEventListener('click', () => {
+    setHelpArticleExpanded(!isHelpArticleExpanded);
+  });
+}
+
+if (helpCaseExpandBtn) {
+  helpCaseExpandBtn.addEventListener('click', () => {
     setHelpArticleExpanded(!isHelpArticleExpanded);
   });
 }

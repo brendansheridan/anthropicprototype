@@ -199,6 +199,15 @@ html, body {
   overflow: visible;
 }
 
+.help-drawer-shell {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-radius: inherit;
+  overflow: hidden;
+  background: #f8f8f9;
+}
+
 .help-drawer.open {
   transform: translateX(0);
 }
@@ -229,7 +238,7 @@ html, body {
   line-height: 1;
 }
 
-.help-drawer.article-mode:hover .help-article-side-toggle {
+.help-drawer.expandable-mode:hover .help-article-side-toggle {
   opacity: 0.96;
   pointer-events: auto;
 }
@@ -641,6 +650,17 @@ html, body {
   cursor: pointer;
 }
 
+.help-subview-expand-btn {
+  border: 1px solid #cfd6e0;
+  background: #ffffff;
+  color: #4e596b;
+  border-radius: 8px;
+  font-size: 13px;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+}
+
 .help-case-form {
   padding: 10px;
   display: flex;
@@ -690,6 +710,8 @@ html, body {
   font-size: 12px;
   color: #545b67;
   border-bottom: 1px solid #e5e7eb;
+  white-space: pre-line;
+  line-height: 1.4;
 }
 
 .help-case-comments {
