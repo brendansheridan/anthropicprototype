@@ -107,6 +107,30 @@ app.post('/api/concierge/chat', (req, res) => {
   }
 });
 
+// Embedded Messaging client config (safe for browser use)
+app.get('/api/messaging/config', (req, res) => {
+  const organizationId = process.env.SF_MESSAGING_ORG_ID;
+  const developerName = process.env.SF_MESSAGING_DEPLOYMENT_NAME;
+  const url = process.env.SF_MESSAGING_URL;
+
+  if (!organizationId || !developerName || !url) {
+    return res.status(500).json({
+      error: 'Missing messaging configuration. Set SF_MESSAGING_ORG_ID, SF_MESSAGING_DEPLOYMENT_NAME, and SF_MESSAGING_URL.'
+    });
+  }
+
+  res.json({
+    organizationId,
+    developerName,
+    url,
+    scriptUrl: process.env.SF_MESSAGING_SCRIPT_URL || `${url}/assets/js/bootstrap.min.js`,
+    language: process.env.SF_MESSAGING_LANGUAGE || 'en_US',
+    snippetConfig: {
+      scrt2URL: url
+    }
+  });
+});
+
 // Concierge page
 app.get('/concierge', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'concierge', 'index.html'));

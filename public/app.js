@@ -14,10 +14,14 @@ const messageInputBottom = document.getElementById('messageInputBottom');
 const sendBtnBottom = document.getElementById('sendBtnBottom');
 
 const newChatBtn = document.getElementById('newChatBtn');
+const helpLauncherBtn = document.getElementById('helpLauncherBtn');
 
 let conversationHistory = [];
 let isWaiting = false;
 let inConversation = false;
+let isHelpLoading = false;
+let isHelpReady = false;
+let helpReadyPromise = null;
 
 // Get active input
 function getActiveInput() {
@@ -265,4 +269,123 @@ function showThinking() {
 
 function scrollToBottom() {
   chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+function setHelpButtonState(label, loading) {
+  if (!helpLauncherBtn) return;
+  helpLauncherBtn.title = label;
+  helpLauncherBtn.setAttribute('aria-label', label);
+  helpLauncherBtn.classList.toggle('loading', loading);
+  helpLauncherBtn.disabled = loading;
+}
+
+async function fetchMessagingConfig() {
+  const response = await fetch('/api/messaging/config');
+  const data = await response.json();
+  if (!response.ok || data.error) {
+    throw new Error(data.error || 'Failed to load Salesforce messaging configuration.');
+  }
+  return data;
+}
+
+function loadEmbeddedMessagingScript(scriptUrl) {
+  return new Promise((resolve, reject) => {
+    const existingScript = document.querySelector('script[data-embedded-messaging="true"]');
+    if (existingScript) {
+      if (window.embeddedservice_bootstrap) {
+        resolve();
+      } else {
+        existingScript.addEventListener('load', resolve, { once: true });
+        existingScript.addEventListener('error', () => reject(new Error('Failed to load Salesforce messaging script.')), { once: true });
+      }
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = scriptUrl;
+    script.async = true;
+    script.dataset.embeddedMessaging = 'true';
+    script.addEventListener('load', resolve, { once: true });
+    script.addEventListener('error', () => reject(new Error('Failed to load Salesforce messaging script.')), { once: true });
+    document.head.appendChild(script);
+  });
+}
+
+function waitForEmbeddedMessagingReady() {
+  return new Promise(resolve => {
+    if (
+      window.embeddedservice_bootstrap &&
+      window.embeddedservice_bootstrap.utilAPI &&
+      typeof window.embeddedservice_bootstrap.utilAPI.launchChat === 'function'
+    ) {
+      resolve();
+      return;
+    }
+    window.addEventListener('onEmbeddedMessagingReady', resolve, { once: true });
+  });
+}
+
+async function bootstrapEmbeddedMessaging() {
+  if (isHelpReady) return;
+  if (helpReadyPromise) return helpReadyPromise;
+
+  helpReadyPromise = (async () => {
+    const config = await fetchMessagingConfig();
+    const scriptUrl = config.scriptUrl || `${config.url}/assets/js/bootstrap.min.js`;
+
+    await loadEmbeddedMessagingScript(scriptUrl);
+
+    const bootstrap = window.embeddedservice_bootstrap;
+    if (!bootstrap || typeof bootstrap.init !== 'function') {
+      throw new Error('Salesforce Embedded Messaging bootstrap API is unavailable.');
+    }
+
+    try {
+      bootstrap.settings.language = config.language || 'en_US';
+      bootstrap.init(config.organizationId, config.developerName, config.url, config.snippetConfig || {});
+    } catch (initErr) {
+      throw new Error(initErr.message || 'Failed to initialize Salesforce Embedded Messaging.');
+    }
+
+    await waitForEmbeddedMessagingReady();
+    isHelpReady = true;
+  })();
+
+  try {
+    await helpReadyPromise;
+  } finally {
+    helpReadyPromise = null;
+  }
+}
+
+async function launchHelpChat() {
+  if (isHelpLoading) return;
+  isHelpLoading = true;
+  setHelpButtonState('Opening...', true);
+
+  try {
+    if (!isHelpReady) {
+      await bootstrapEmbeddedMessaging();
+    }
+    if (
+      window.embeddedservice_bootstrap &&
+      window.embeddedservice_bootstrap.utilAPI &&
+      typeof window.embeddedservice_bootstrap.utilAPI.launchChat === 'function'
+    ) {
+      window.embeddedservice_bootstrap.utilAPI.launchChat();
+    } else {
+      throw new Error('Salesforce chat launcher API is unavailable.');
+    }
+    setHelpButtonState('Help', false);
+  } catch (err) {
+    console.error('Help chat initialization failed:', err);
+    setHelpButtonState('Retry Help', false);
+    alert('Unable to open help chat right now. Please try again.');
+  } finally {
+    isHelpLoading = false;
+  }
+}
+
+if (helpLauncherBtn) {
+  helpLauncherBtn.addEventListener('click', launchHelpChat);
 }
