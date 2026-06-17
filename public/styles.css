@@ -456,6 +456,15 @@ html, body {
   background: #f8f8f9;
 }
 
+.help-home-view[hidden],
+.help-thread-view[hidden],
+.help-case-view[hidden],
+.help-case-lookup-view[hidden],
+.help-case-detail-view[hidden],
+.help-volume-banner[hidden] {
+  display: none !important;
+}
+
 .help-subview-header {
   display: flex;
   align-items: center;
