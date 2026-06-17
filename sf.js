@@ -165,6 +165,39 @@ async function getCasesByContactId(contactId) {
   }));
 }
 
+async function searchKnowledgeArticles(searchTerm) {
+  const normalized = String(searchTerm || '').trim().replace(/'/g, "\\'");
+  const whereClause = normalized
+    ? `AND (Title LIKE '%${normalized}%' OR Summary LIKE '%${normalized}%')`
+    : '';
+  const objectCandidates = ['Knowledge__kav', 'KnowledgeArticleVersion'];
+  let lastError = null;
+
+  for (const objectName of objectCandidates) {
+    try {
+      const soql = [
+        'SELECT Id,Title,Summary,LastPublishedDate',
+        `FROM ${objectName}`,
+        "WHERE PublishStatus='Online' AND Language='en_US'",
+        whereClause,
+        'ORDER BY LastPublishedDate DESC LIMIT 8'
+      ].join(' ');
+
+      const records = await queryRecords(soql);
+      return records.map(row => ({
+        id: row.Id,
+        title: row.Title,
+        summary: row.Summary,
+        lastPublishedDate: row.LastPublishedDate
+      }));
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  throw lastError || new Error('Unable to query Salesforce Knowledge.');
+}
+
 async function getCaseComments(caseId) {
   const safeCaseId = String(caseId || '').replace(/'/g, "\\'");
   const soql = [
@@ -407,6 +440,7 @@ module.exports = {
   updateContact,
   getCaseByReference,
   getCasesByContactId,
+  searchKnowledgeArticles,
   getCaseComments,
   addCaseComment,
   uploadCaseFile,

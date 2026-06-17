@@ -199,6 +199,17 @@ app.get('/api/help/cases', async (req, res) => {
   }
 });
 
+app.get('/api/help/knowledge', async (req, res) => {
+  try {
+    const search = req.query.search || '';
+    const articles = await sf.searchKnowledgeArticles(search);
+    res.json({ articles });
+  } catch (err) {
+    console.error('Help knowledge search error:', err.message);
+    res.status(500).json({ error: 'Unable to search help knowledge.' });
+  }
+});
+
 app.get('/api/help/cases/:caseRef', async (req, res) => {
   try {
     const caseRef = req.params.caseRef;

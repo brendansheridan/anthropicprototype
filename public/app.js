@@ -56,6 +56,8 @@ const helpCaseCommentBtn = document.getElementById('helpCaseCommentBtn');
 const helpCaseFileInput = document.getElementById('helpCaseFileInput');
 const helpCaseDetailFeedback = document.getElementById('helpCaseDetailFeedback');
 const helpVolumeBanner = document.getElementById('helpVolumeBanner');
+const helpKnowledgeSearchInput = document.getElementById('helpKnowledgeSearchInput');
+const helpKnowledgeResults = document.getElementById('helpKnowledgeResults');
 
 let conversationHistory = [];
 let isWaiting = false;
@@ -68,6 +70,7 @@ let awaitingAgentReply = false;
 let isProfileMenuOpen = false;
 let activeCase = null;
 let hasSentHelpMessage = false;
+let helpKnowledgeSearchDebounce = null;
 const helpRenderedIds = new Set();
 const pendingUserMessages = [];
 
@@ -439,6 +442,37 @@ async function loadUserCases() {
   return cases;
 }
 
+function renderKnowledgeResults(articles) {
+  if (!helpKnowledgeResults) return;
+  helpKnowledgeResults.textContent = '';
+
+  if (!Array.isArray(articles) || articles.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'help-case-comment';
+    empty.textContent = 'No help articles found.';
+    helpKnowledgeResults.appendChild(empty);
+    return;
+  }
+
+  articles.forEach(article => {
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'help-home-link';
+    row.textContent = article.title || 'Untitled article';
+    row.title = article.summary || '';
+    helpKnowledgeResults.appendChild(row);
+  });
+}
+
+async function searchHelpKnowledge(searchTerm = '') {
+  const response = await fetch(`/api/help/knowledge?search=${encodeURIComponent(searchTerm)}`);
+  const data = await response.json();
+  if (!response.ok || data.error) {
+    throw new Error(data.error || 'Failed to search help knowledge.');
+  }
+  renderKnowledgeResults(data.articles || []);
+}
+
 function openProfileMenu() {
   if (!profileMenu || !profileMenuTrigger) return;
   profileMenu.classList.add('open');
@@ -730,6 +764,14 @@ async function openHelpDrawer() {
   }
   if (helpLauncherBtn) helpLauncherBtn.classList.add('active');
   setHelpView('home');
+  if (helpKnowledgeSearchInput) {
+    helpKnowledgeSearchInput.value = '';
+  }
+  try {
+    await searchHelpKnowledge('');
+  } catch (err) {
+    console.error('Knowledge preload failed:', err);
+  }
 }
 
 async function openHelpThread() {
@@ -828,6 +870,21 @@ if (helpSendMessageCta) {
       setHelpStatus('Unable to connect right now');
       setHelpView('home');
     }
+  });
+}
+
+if (helpKnowledgeSearchInput) {
+  helpKnowledgeSearchInput.addEventListener('input', () => {
+    if (helpKnowledgeSearchDebounce) {
+      clearTimeout(helpKnowledgeSearchDebounce);
+    }
+    helpKnowledgeSearchDebounce = setTimeout(async () => {
+      try {
+        await searchHelpKnowledge(helpKnowledgeSearchInput.value.trim());
+      } catch (err) {
+        console.error('Knowledge search failed:', err);
+      }
+    }, 250);
   });
 }
 
