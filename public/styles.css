@@ -1343,3 +1343,126 @@ textarea::placeholder {
     border-bottom: none;
   }
 }
+
+/* Shadcn + Anthropic Help Theme Overrides */
+.help-drawer {
+  background: #f6f7f9;
+  border: 1px solid #d9dee8;
+  border-radius: 16px;
+  box-shadow: 0 18px 44px rgba(6, 14, 28, 0.28);
+}
+
+.help-drawer-shell {
+  background: #f6f7f9;
+}
+
+.help-drawer-header,
+.help-status-row,
+.help-subview-header,
+.help-case-actions,
+.help-drawer-input {
+  background: #f6f7f9;
+  border-color: #d9dee8;
+}
+
+.help-title-group strong,
+.help-subview-header strong,
+.help-article-content h4,
+.help-case-list-item strong,
+.help-entry.agent .help-entry-bubble,
+#helpInput {
+  color: #1f2937;
+}
+
+.help-title-group span,
+.help-status-row,
+.help-article-meta,
+.help-form-feedback,
+.help-case-detail-meta,
+.help-case-comment-meta,
+.help-case-list-item span,
+.help-subview-back,
+.help-subview-expand-btn,
+.help-upload-label,
+.help-home-search-header,
+.help-home-link,
+.help-home-search-input {
+  color: #5f6b7c;
+}
+
+.help-status-card,
+.help-home-action,
+.help-home-search,
+.help-entry.agent .help-entry-bubble,
+.help-case-list-item,
+.help-case-comment,
+.help-case-form input,
+.help-case-form textarea,
+.help-case-form select,
+#helpCaseCommentInput,
+#helpInput,
+.help-subview-expand-btn,
+.help-article-side-toggle,
+.help-volume-banner {
+  background: #ffffff;
+  border-color: #d9dee8;
+}
+
+.help-status-card,
+.help-home-action,
+.help-home-search,
+.help-case-list-item,
+.help-case-comment,
+.help-subview-expand-btn,
+#helpInput,
+.help-case-form input,
+.help-case-form textarea,
+.help-case-form select,
+#helpCaseCommentInput {
+  border-radius: 12px;
+}
+
+.help-home-action,
+.help-home-search-header,
+.help-home-link,
+.help-home-search-input,
+.help-bottom-nav-item,
+.help-status-card strong,
+.help-status-card p {
+  font-size: 13px;
+}
+
+.help-home-action:hover,
+.help-home-link:hover,
+.help-case-list-item:hover {
+  background: #f1f3f7;
+}
+
+.help-bottom-nav {
+  border-top-color: #d9dee8;
+}
+
+.help-bottom-nav-item {
+  color: #7b8494;
+}
+
+.help-bottom-nav-item.active {
+  color: #0284c7;
+  background: #e0f2fe;
+}
+
+.help-primary-btn,
+.help-drawer .send-btn:not(:disabled) {
+  background: #0ea5c9;
+}
+
+.help-primary-btn:hover,
+.help-drawer .send-btn:not(:disabled):hover {
+  background: #0284c7;
+}
+
+.help-entry.user .help-entry-bubble {
+  background: #ecf8ff;
+  border-color: #cfeefe;
+  color: #083344;
+}
