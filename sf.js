@@ -1,4 +1,5 @@
 const fetch = require('node-fetch');
+const { randomUUID } = require('crypto');
 
 let accessToken = null;
 let tokenExpiry = 0;
@@ -140,7 +141,7 @@ async function initializeMessagingSession() {
 
   const tokenData = await tokenResponse.json();
   const accessToken = tokenData.accessToken;
-  const conversationId = `${Date.now()}-${Math.random().toString(16).slice(2)}`.toLowerCase();
+  const conversationId = randomUUID().toLowerCase();
 
   const conversationResponse = await fetch(`https://${host}/iamessage/api/v2/conversation`, {
     method: 'POST',
@@ -182,7 +183,7 @@ async function sendMessagingMessage({ accessToken, conversationId, text }) {
     },
     body: JSON.stringify({
       message: {
-        id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        id: randomUUID().toLowerCase(),
         messageType: 'StaticContentMessage',
         staticContent: {
           formatType: 'Text',
