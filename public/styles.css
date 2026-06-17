@@ -196,7 +196,7 @@ html, body {
   transform: translateX(calc(100% + 24px));
   transition: transform 0.2s ease, width 0.24s ease;
   z-index: 30;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .help-drawer.open {
