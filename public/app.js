@@ -20,7 +20,6 @@ const profileMenuTrigger = document.getElementById('profileMenuTrigger');
 const profileMenu = document.getElementById('profileMenu');
 const profileGetHelpBtn = document.getElementById('profileGetHelpBtn');
 const helpDrawer = document.getElementById('helpDrawer');
-const helpBackBtn = document.getElementById('helpBackBtn');
 const helpCloseBtn = document.getElementById('helpCloseBtn');
 const helpMenuBtn = document.getElementById('helpMenuBtn');
 const helpMenu = document.getElementById('helpMenu');
@@ -363,7 +362,7 @@ function setHelpTyping(isVisible) {
 
   const text = document.createElement('span');
   text.className = 'typing-text';
-  text.textContent = 'Anthropic Support is typing...';
+  text.textContent = 'Claudia is typing...';
   bubble.appendChild(text);
 
   row.appendChild(bubble);
@@ -415,7 +414,7 @@ async function initializeHelpSession() {
     throw new Error(data.error || 'Failed to start help session.');
   }
   helpSession = data;
-  setHelpStatus('Connected to Anthropic support');
+  setHelpStatus('Connected to Claudia');
 }
 
 async function fetchHelpMessages() {
@@ -532,7 +531,7 @@ function resetHelpConversationState() {
   if (helpSendBtn) {
     helpSendBtn.disabled = true;
   }
-  setHelpStatus('Start an Anthropic support conversation');
+  setHelpStatus('Start a conversation with Claudia');
 }
 
 async function endHelpConversation() {
@@ -600,7 +599,7 @@ async function openHelpDrawer() {
 
 async function openHelpThread() {
   setHelpView('thread');
-  setHelpStatus('Connecting to Anthropic support...');
+  setHelpStatus('Connecting to Claudia...');
   if (!helpSession) {
     await initializeHelpSession();
   }
@@ -654,10 +653,6 @@ if (profileGetHelpBtn) {
 
 if (helpCloseBtn) {
   helpCloseBtn.addEventListener('click', closeHelpDrawer);
-}
-
-if (helpBackBtn) {
-  helpBackBtn.addEventListener('click', closeHelpDrawer);
 }
 
 if (helpMenuBtn) {

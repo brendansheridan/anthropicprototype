@@ -219,6 +219,14 @@ html, body {
   color: #666b77;
 }
 
+.help-brand-logo {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
 .help-header-actions {
   display: flex;
   align-items: center;
@@ -276,14 +284,14 @@ html, body {
 }
 
 .help-title-group strong {
-  font-size: 11px;
+  font-size: 12px;
   color: #1e2025;
   font-weight: 600;
 }
 
 .help-title-group span {
   margin-top: 2px;
-  font-size: 10px;
+  font-size: 11px;
   color: #878c97;
 }
 
@@ -370,7 +378,7 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: 12px;
   color: #5f6672;
   padding: 9px 10px;
   border-bottom: 1px solid #eceff3;
@@ -383,8 +391,9 @@ html, body {
   background: transparent;
   color: #5e6571;
   text-align: left;
-  font-size: 10px;
-  padding: 8px 10px;
+  font-size: 13px;
+  line-height: 1.35;
+  padding: 10px;
   cursor: pointer;
 }
 
