@@ -10,7 +10,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Health check
@@ -161,6 +161,69 @@ app.post('/api/messaging/end', async (req, res) => {
   } catch (err) {
     console.error('Messaging end error:', err.message);
     res.status(500).json({ error: 'Unable to end messaging session.' });
+  }
+});
+
+// Headless Help Case APIs
+app.post('/api/help/cases', async (req, res) => {
+  try {
+    const { subject, description, type, email } = req.body || {};
+    if (!subject || !description) {
+      return res.status(400).json({ error: 'subject and description are required.' });
+    }
+    const caseResult = await sf.createCase({
+      Subject: subject,
+      Description: description,
+      Status: 'New',
+      Priority: type === 'Billing' ? 'High' : 'Medium',
+      Type: type || 'General',
+      Origin: 'Web',
+      SuppliedEmail: email || undefined
+    });
+    res.json({ case: caseResult });
+  } catch (err) {
+    console.error('Help case create error:', err.message);
+    res.status(500).json({ error: 'Unable to create support case.' });
+  }
+});
+
+app.get('/api/help/cases/:caseRef', async (req, res) => {
+  try {
+    const caseRef = req.params.caseRef;
+    const caseRecord = await sf.getCaseByReference(caseRef);
+    const comments = await sf.getCaseComments(caseRecord.id);
+    res.json({ case: caseRecord, comments });
+  } catch (err) {
+    const notFound = /not found/i.test(err.message || '');
+    console.error('Help case lookup error:', err.message);
+    res.status(notFound ? 404 : 500).json({ error: notFound ? 'Case not found.' : 'Unable to load case.' });
+  }
+});
+
+app.post('/api/help/cases/:caseId/comments', async (req, res) => {
+  try {
+    const { caseId } = req.params;
+    const { commentBody } = req.body || {};
+    if (!commentBody) {
+      return res.status(400).json({ error: 'commentBody is required.' });
+    }
+    const result = await sf.addCaseComment(caseId, commentBody);
+    res.json(result);
+  } catch (err) {
+    console.error('Help case comment error:', err.message);
+    res.status(500).json({ error: 'Unable to add case comment.' });
+  }
+});
+
+app.post('/api/help/cases/:caseId/files', async (req, res) => {
+  try {
+    const { caseId } = req.params;
+    const { fileName, contentType, dataBase64 } = req.body || {};
+    const result = await sf.uploadCaseFile({ caseId, fileName, contentType, dataBase64 });
+    res.json(result);
+  } catch (err) {
+    console.error('Help case file upload error:', err.message);
+    res.status(500).json({ error: 'Unable to upload case file.' });
   }
 });
 

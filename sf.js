@@ -98,9 +98,108 @@ async function queryContact(email) {
   return result.records && result.records.length > 0 ? result.records[0] : null;
 }
 
+async function queryRecords(soql) {
+  const result = await sfRequest('GET', `query?q=${encodeURIComponent(soql)}`);
+  return Array.isArray(result.records) ? result.records : [];
+}
+
 async function updateContact(contactId, data) {
   await sfRequest('PATCH', `sobjects/Contact/${contactId}`, data);
   return { success: true };
+}
+
+async function getCaseByReference(caseRef) {
+  const ref = String(caseRef || '').trim();
+  if (!ref) {
+    throw new Error('Case reference is required.');
+  }
+
+  const isCaseId = /^500[a-zA-Z0-9]{12,15}$/.test(ref);
+  const where = isCaseId
+    ? `Id='${ref}'`
+    : `CaseNumber='${ref.replace(/'/g, "\\'")}'`;
+
+  const soql = [
+    'SELECT Id,CaseNumber,Subject,Status,Priority,Origin,Type,Description,CreatedDate',
+    `FROM Case WHERE ${where} LIMIT 1`
+  ].join(' ');
+
+  const records = await queryRecords(soql);
+  if (records.length === 0) {
+    throw new Error('Case not found.');
+  }
+  const row = records[0];
+  return {
+    id: row.Id,
+    caseNumber: row.CaseNumber,
+    subject: row.Subject,
+    status: row.Status,
+    priority: row.Priority,
+    origin: row.Origin,
+    type: row.Type,
+    description: row.Description,
+    createdDate: row.CreatedDate
+  };
+}
+
+async function getCaseComments(caseId) {
+  const safeCaseId = String(caseId || '').replace(/'/g, "\\'");
+  const soql = [
+    'SELECT Id,CommentBody,CreatedDate,CreatedBy.Name',
+    `FROM CaseComment WHERE ParentId='${safeCaseId}'`,
+    'ORDER BY CreatedDate ASC LIMIT 100'
+  ].join(' ');
+  const records = await queryRecords(soql);
+  return records.map(row => ({
+    id: row.Id,
+    commentBody: row.CommentBody,
+    createdDate: row.CreatedDate,
+    createdByName: row.CreatedBy ? row.CreatedBy.Name : ''
+  }));
+}
+
+async function addCaseComment(caseId, commentBody) {
+  if (!caseId || !commentBody) {
+    throw new Error('caseId and commentBody are required.');
+  }
+  const result = await sfRequest('POST', 'sobjects/CaseComment', {
+    ParentId: caseId,
+    CommentBody: commentBody,
+    IsPublished: true
+  });
+  return { id: result.id };
+}
+
+async function uploadCaseFile({ caseId, fileName, contentType, dataBase64 }) {
+  if (!caseId || !fileName || !dataBase64) {
+    throw new Error('caseId, fileName, and dataBase64 are required.');
+  }
+
+  const version = await sfRequest('POST', 'sobjects/ContentVersion', {
+    Title: fileName,
+    PathOnClient: fileName,
+    VersionData: dataBase64
+  });
+
+  const records = await queryRecords(
+    `SELECT ContentDocumentId FROM ContentVersion WHERE Id='${version.id}' LIMIT 1`
+  );
+  if (records.length === 0 || !records[0].ContentDocumentId) {
+    throw new Error('Uploaded file could not be linked.');
+  }
+
+  await sfRequest('POST', 'sobjects/ContentDocumentLink', {
+    ContentDocumentId: records[0].ContentDocumentId,
+    LinkedEntityId: caseId,
+    ShareType: 'V',
+    Visibility: 'AllUsers'
+  });
+
+  return {
+    contentVersionId: version.id,
+    contentDocumentId: records[0].ContentDocumentId,
+    contentType: contentType || ''
+  };
 }
 
 function getMessagingHost() {
@@ -283,6 +382,10 @@ module.exports = {
   createTask,
   queryContact,
   updateContact,
+  getCaseByReference,
+  getCaseComments,
+  addCaseComment,
+  uploadCaseFile,
   initializeMessagingSession,
   sendMessagingMessage,
   getMessagingMessages,

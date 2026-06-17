@@ -227,6 +227,14 @@
             <span>Send us a message</span>
             <span>›</span>
           </button>
+          <button class="help-home-action" id="helpLogTicketCta" type="button">
+            <span>Log a support ticket</span>
+            <span>›</span>
+          </button>
+          <button class="help-home-action" id="helpCheckCaseCta" type="button">
+            <span>Check on a case</span>
+            <span>›</span>
+          </button>
           <div class="help-home-search">
             <div class="help-home-search-header">
               <span>Search for help</span>
@@ -243,7 +251,67 @@
             <button class="help-bottom-nav-item" type="button">Help</button>
           </div>
         </div>
+        <div class="help-case-view" id="helpCaseView" hidden>
+          <div class="help-subview-header">
+            <button class="help-subview-back" id="helpCaseBackBtn" type="button">‹ Back</button>
+            <strong>Case Support</strong>
+          </div>
+          <form class="help-case-form" id="helpCaseForm">
+            <label>Case type
+              <select id="helpCaseType">
+                <option value="General">General</option>
+                <option value="Technical">Technical</option>
+                <option value="Billing">Billing</option>
+              </select>
+            </label>
+            <label>Subject
+              <input id="helpCaseSubject" type="text" placeholder="Brief summary" required>
+            </label>
+            <label>Description
+              <textarea id="helpCaseDescription" rows="4" placeholder="Describe your issue..." required></textarea>
+            </label>
+            <label>Email
+              <input id="helpCaseEmail" type="email" placeholder="name@company.com">
+            </label>
+            <button class="help-primary-btn" id="helpCaseSubmitBtn" type="submit">Create case</button>
+            <p class="help-form-feedback" id="helpCaseFeedback"></p>
+          </form>
+        </div>
+        <div class="help-case-lookup-view" id="helpCaseLookupView" hidden>
+          <div class="help-subview-header">
+            <button class="help-subview-back" id="helpCaseLookupBackBtn" type="button">‹ Back</button>
+            <strong>Find your case</strong>
+          </div>
+          <div class="help-case-form">
+            <label>Case number or ID
+              <input id="helpCaseLookupInput" type="text" placeholder="e.g. 00012345 or 500...">
+            </label>
+            <button class="help-primary-btn" id="helpCaseLookupBtn" type="button">Open case</button>
+            <p class="help-form-feedback" id="helpCaseLookupFeedback"></p>
+          </div>
+        </div>
+        <div class="help-case-detail-view" id="helpCaseDetailView" hidden>
+          <div class="help-subview-header">
+            <button class="help-subview-back" id="helpCaseDetailBackBtn" type="button">‹ Back</button>
+            <strong id="helpCaseDetailTitle">Case</strong>
+          </div>
+          <div class="help-case-detail-meta" id="helpCaseDetailMeta"></div>
+          <div class="help-case-comments" id="helpCaseComments"></div>
+          <div class="help-case-actions">
+            <textarea id="helpCaseCommentInput" rows="3" placeholder="Add a case comment..."></textarea>
+            <div class="help-case-action-row">
+              <button class="help-primary-btn" id="helpCaseCommentBtn" type="button">Add comment</button>
+              <label class="help-upload-label">Upload file
+                <input id="helpCaseFileInput" type="file">
+              </label>
+            </div>
+            <p class="help-form-feedback" id="helpCaseDetailFeedback"></p>
+          </div>
+        </div>
         <div class="help-thread-view" id="helpThreadView" hidden>
+          <div class="help-volume-banner" id="helpVolumeBanner">
+            We are currently experiencing a high volume of inquiries. Responses may take slightly longer than usual.
+          </div>
           <div class="help-status-row">
             <span id="helpStatusText">Start a conversation with Claudia</span>
           </div>

@@ -29,8 +29,33 @@ const helpInput = document.getElementById('helpInput');
 const helpSendBtn = document.getElementById('helpSendBtn');
 const helpStatusText = document.getElementById('helpStatusText');
 const helpHomeView = document.getElementById('helpHomeView');
+const helpCaseView = document.getElementById('helpCaseView');
+const helpCaseLookupView = document.getElementById('helpCaseLookupView');
+const helpCaseDetailView = document.getElementById('helpCaseDetailView');
 const helpThreadView = document.getElementById('helpThreadView');
 const helpSendMessageCta = document.getElementById('helpSendMessageCta');
+const helpLogTicketCta = document.getElementById('helpLogTicketCta');
+const helpCheckCaseCta = document.getElementById('helpCheckCaseCta');
+const helpCaseBackBtn = document.getElementById('helpCaseBackBtn');
+const helpCaseLookupBackBtn = document.getElementById('helpCaseLookupBackBtn');
+const helpCaseDetailBackBtn = document.getElementById('helpCaseDetailBackBtn');
+const helpCaseForm = document.getElementById('helpCaseForm');
+const helpCaseType = document.getElementById('helpCaseType');
+const helpCaseSubject = document.getElementById('helpCaseSubject');
+const helpCaseDescription = document.getElementById('helpCaseDescription');
+const helpCaseEmail = document.getElementById('helpCaseEmail');
+const helpCaseFeedback = document.getElementById('helpCaseFeedback');
+const helpCaseLookupInput = document.getElementById('helpCaseLookupInput');
+const helpCaseLookupBtn = document.getElementById('helpCaseLookupBtn');
+const helpCaseLookupFeedback = document.getElementById('helpCaseLookupFeedback');
+const helpCaseDetailTitle = document.getElementById('helpCaseDetailTitle');
+const helpCaseDetailMeta = document.getElementById('helpCaseDetailMeta');
+const helpCaseComments = document.getElementById('helpCaseComments');
+const helpCaseCommentInput = document.getElementById('helpCaseCommentInput');
+const helpCaseCommentBtn = document.getElementById('helpCaseCommentBtn');
+const helpCaseFileInput = document.getElementById('helpCaseFileInput');
+const helpCaseDetailFeedback = document.getElementById('helpCaseDetailFeedback');
+const helpVolumeBanner = document.getElementById('helpVolumeBanner');
 
 let conversationHistory = [];
 let isWaiting = false;
@@ -41,6 +66,8 @@ let isHelpOpen = false;
 let helpPollingId = null;
 let awaitingAgentReply = false;
 let isProfileMenuOpen = false;
+let activeCase = null;
+let hasSentHelpMessage = false;
 const helpRenderedIds = new Set();
 const pendingUserMessages = [];
 
@@ -307,10 +334,62 @@ function setHelpStatus(text) {
 }
 
 function setHelpView(mode) {
-  if (!helpHomeView || !helpThreadView) return;
-  const showThread = mode === 'thread';
-  helpHomeView.hidden = showThread;
-  helpThreadView.hidden = !showThread;
+  const views = [
+    { key: 'home', el: helpHomeView },
+    { key: 'case', el: helpCaseView },
+    { key: 'lookup', el: helpCaseLookupView },
+    { key: 'detail', el: helpCaseDetailView },
+    { key: 'thread', el: helpThreadView }
+  ];
+  views.forEach(view => {
+    if (!view.el) return;
+    view.el.hidden = view.key !== mode;
+  });
+}
+
+function setHighVolumeBannerVisible(visible) {
+  if (!helpVolumeBanner) return;
+  helpVolumeBanner.hidden = !visible;
+}
+
+function renderCaseComments(comments) {
+  if (!helpCaseComments) return;
+  helpCaseComments.textContent = '';
+  if (!Array.isArray(comments) || comments.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'help-case-comment';
+    empty.textContent = 'No comments yet.';
+    helpCaseComments.appendChild(empty);
+    return;
+  }
+  comments.forEach(comment => {
+    const entry = document.createElement('div');
+    entry.className = 'help-case-comment';
+    entry.textContent = comment.commentBody || '';
+
+    const meta = document.createElement('div');
+    meta.className = 'help-case-comment-meta';
+    const stamp = comment.createdDate ? new Date(comment.createdDate).toLocaleString() : '';
+    meta.textContent = stamp ? `Posted ${stamp}` : 'Posted recently';
+    entry.appendChild(meta);
+    helpCaseComments.appendChild(entry);
+  });
+}
+
+async function loadCaseDetails(caseRef) {
+  const response = await fetch(`/api/help/cases/${encodeURIComponent(caseRef)}`);
+  const data = await response.json();
+  if (!response.ok || data.error) {
+    throw new Error(data.error || 'Could not load case.');
+  }
+  activeCase = data.case;
+  if (helpCaseDetailTitle) {
+    helpCaseDetailTitle.textContent = `Case ${activeCase.caseNumber || activeCase.id}`;
+  }
+  if (helpCaseDetailMeta) {
+    helpCaseDetailMeta.textContent = `${activeCase.subject || 'No subject'} • ${activeCase.status || 'Unknown'} • ${activeCase.priority || 'Unknown priority'}`;
+  }
+  renderCaseComments(data.comments || []);
 }
 
 function openProfileMenu() {
@@ -443,6 +522,8 @@ async function sendHelpMessage() {
   helpSendBtn.disabled = true;
 
   try {
+    hasSentHelpMessage = true;
+    setHighVolumeBannerVisible(false);
     appendHelpEntry('user', text);
     pendingUserMessages.push(text);
     helpInput.value = '';
@@ -516,10 +597,12 @@ function toggleHelpMenu() {
 function resetHelpConversationState() {
   helpSession = null;
   awaitingAgentReply = false;
+  hasSentHelpMessage = false;
   helpRenderedIds.clear();
   pendingUserMessages.length = 0;
   setHelpTyping(false);
   setHelpView('home');
+  setHighVolumeBannerVisible(true);
   if (helpMessages) {
     helpMessages.textContent = '';
   }
@@ -531,6 +614,11 @@ function resetHelpConversationState() {
   if (helpSendBtn) {
     helpSendBtn.disabled = true;
   }
+  if (helpCaseFeedback) helpCaseFeedback.textContent = '';
+  if (helpCaseLookupFeedback) helpCaseLookupFeedback.textContent = '';
+  if (helpCaseDetailFeedback) helpCaseDetailFeedback.textContent = '';
+  if (helpCaseCommentInput) helpCaseCommentInput.value = '';
+  activeCase = null;
   setHelpStatus('Start a conversation with Claudia');
 }
 
@@ -599,6 +687,7 @@ async function openHelpDrawer() {
 
 async function openHelpThread() {
   setHelpView('thread');
+  setHighVolumeBannerVisible(!hasSentHelpMessage);
   setHelpStatus('Connecting to Claudia...');
   if (!helpSession) {
     await initializeHelpSession();
@@ -626,7 +715,7 @@ async function launchHelpChat() {
     setHelpButtonState('Retry Help', false);
   } finally {
     isHelpLoading = false;
-    if (!helpLauncherBtn.classList.contains('loading')) {
+    if (!helpLauncherBtn || !helpLauncherBtn.classList.contains('loading')) {
       setHelpButtonState(isHelpOpen ? 'Close Help' : 'Open Salesforce Help chat', false);
     }
   }
@@ -691,6 +780,146 @@ if (helpSendMessageCta) {
       console.error('Failed to open help thread:', err);
       setHelpStatus('Unable to connect right now');
       setHelpView('home');
+    }
+  });
+}
+
+if (helpLogTicketCta) {
+  helpLogTicketCta.addEventListener('click', () => {
+    if (helpCaseFeedback) helpCaseFeedback.textContent = '';
+    setHelpView('case');
+  });
+}
+
+if (helpCheckCaseCta) {
+  helpCheckCaseCta.addEventListener('click', () => {
+    if (helpCaseLookupFeedback) helpCaseLookupFeedback.textContent = '';
+    setHelpView('lookup');
+  });
+}
+
+if (helpCaseBackBtn) {
+  helpCaseBackBtn.addEventListener('click', () => setHelpView('home'));
+}
+
+if (helpCaseLookupBackBtn) {
+  helpCaseLookupBackBtn.addEventListener('click', () => setHelpView('home'));
+}
+
+if (helpCaseDetailBackBtn) {
+  helpCaseDetailBackBtn.addEventListener('click', () => setHelpView('lookup'));
+}
+
+if (helpCaseForm) {
+  helpCaseForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    if (!helpCaseSubject || !helpCaseDescription) return;
+
+    if (helpCaseFeedback) helpCaseFeedback.textContent = 'Creating case...';
+    try {
+      const response = await fetch('/api/help/cases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: helpCaseType ? helpCaseType.value : 'General',
+          subject: helpCaseSubject.value.trim(),
+          description: helpCaseDescription.value.trim(),
+          email: helpCaseEmail ? helpCaseEmail.value.trim() : ''
+        })
+      });
+      const data = await response.json();
+      if (!response.ok || data.error) {
+        throw new Error(data.error || 'Case creation failed.');
+      }
+      if (helpCaseFeedback) {
+        helpCaseFeedback.textContent = `Case ${data.case.caseNumber || data.case.id} created successfully.`;
+      }
+      helpCaseForm.reset();
+    } catch (err) {
+      if (helpCaseFeedback) helpCaseFeedback.textContent = err.message;
+    }
+  });
+}
+
+if (helpCaseLookupBtn) {
+  helpCaseLookupBtn.addEventListener('click', async () => {
+    if (!helpCaseLookupInput) return;
+    const caseRef = helpCaseLookupInput.value.trim();
+    if (!caseRef) {
+      if (helpCaseLookupFeedback) helpCaseLookupFeedback.textContent = 'Enter a case number or id.';
+      return;
+    }
+    if (helpCaseLookupFeedback) helpCaseLookupFeedback.textContent = 'Loading case...';
+    try {
+      await loadCaseDetails(caseRef);
+      if (helpCaseLookupFeedback) helpCaseLookupFeedback.textContent = '';
+      setHelpView('detail');
+    } catch (err) {
+      if (helpCaseLookupFeedback) helpCaseLookupFeedback.textContent = err.message;
+    }
+  });
+}
+
+if (helpCaseCommentBtn) {
+  helpCaseCommentBtn.addEventListener('click', async () => {
+    if (!activeCase || !helpCaseCommentInput) return;
+    const commentBody = helpCaseCommentInput.value.trim();
+    if (!commentBody) {
+      if (helpCaseDetailFeedback) helpCaseDetailFeedback.textContent = 'Please enter a comment.';
+      return;
+    }
+    if (helpCaseDetailFeedback) helpCaseDetailFeedback.textContent = 'Posting comment...';
+    try {
+      const response = await fetch(`/api/help/cases/${encodeURIComponent(activeCase.id)}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ commentBody })
+      });
+      const data = await response.json();
+      if (!response.ok || data.error) {
+        throw new Error(data.error || 'Could not post comment.');
+      }
+      helpCaseCommentInput.value = '';
+      await loadCaseDetails(activeCase.id);
+      if (helpCaseDetailFeedback) helpCaseDetailFeedback.textContent = 'Comment added.';
+    } catch (err) {
+      if (helpCaseDetailFeedback) helpCaseDetailFeedback.textContent = err.message;
+    }
+  });
+}
+
+if (helpCaseFileInput) {
+  helpCaseFileInput.addEventListener('change', async e => {
+    if (!activeCase || !e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+    if (helpCaseDetailFeedback) helpCaseDetailFeedback.textContent = 'Uploading file...';
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(arrayBuffer);
+      let binary = '';
+      bytes.forEach(byte => {
+        binary += String.fromCharCode(byte);
+      });
+      const dataBase64 = btoa(binary);
+
+      const response = await fetch(`/api/help/cases/${encodeURIComponent(activeCase.id)}/files`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fileName: file.name,
+          contentType: file.type,
+          dataBase64
+        })
+      });
+      const data = await response.json();
+      if (!response.ok || data.error) {
+        throw new Error(data.error || 'Could not upload file.');
+      }
+      if (helpCaseDetailFeedback) helpCaseDetailFeedback.textContent = 'File uploaded.';
+    } catch (err) {
+      if (helpCaseDetailFeedback) helpCaseDetailFeedback.textContent = err.message;
+    } finally {
+      helpCaseFileInput.value = '';
     }
   });
 }
