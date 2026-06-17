@@ -8,6 +8,7 @@ const { getConciergeResponse } = require('./concierge-conversation');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const HELP_DEMO_CONTACT_ID = '003aj00001lEHGpAAO';
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
@@ -178,12 +179,23 @@ app.post('/api/help/cases', async (req, res) => {
       Priority: type === 'Billing' ? 'High' : 'Medium',
       Type: type || 'General',
       Origin: 'Web',
+      ContactId: HELP_DEMO_CONTACT_ID,
       SuppliedEmail: email || undefined
     });
     res.json({ case: caseResult });
   } catch (err) {
     console.error('Help case create error:', err.message);
     res.status(500).json({ error: 'Unable to create support case.' });
+  }
+});
+
+app.get('/api/help/cases', async (req, res) => {
+  try {
+    const cases = await sf.getCasesByContactId(HELP_DEMO_CONTACT_ID);
+    res.json({ cases });
+  } catch (err) {
+    console.error('Help case list error:', err.message);
+    res.status(500).json({ error: 'Unable to load case list.' });
   }
 });
 

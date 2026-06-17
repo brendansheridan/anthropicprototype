@@ -45,9 +45,9 @@ const helpCaseSubject = document.getElementById('helpCaseSubject');
 const helpCaseDescription = document.getElementById('helpCaseDescription');
 const helpCaseEmail = document.getElementById('helpCaseEmail');
 const helpCaseFeedback = document.getElementById('helpCaseFeedback');
-const helpCaseLookupInput = document.getElementById('helpCaseLookupInput');
-const helpCaseLookupBtn = document.getElementById('helpCaseLookupBtn');
+const helpCaseRefreshBtn = document.getElementById('helpCaseRefreshBtn');
 const helpCaseLookupFeedback = document.getElementById('helpCaseLookupFeedback');
+const helpCaseList = document.getElementById('helpCaseList');
 const helpCaseDetailTitle = document.getElementById('helpCaseDetailTitle');
 const helpCaseDetailMeta = document.getElementById('helpCaseDetailMeta');
 const helpCaseComments = document.getElementById('helpCaseComments');
@@ -390,6 +390,53 @@ async function loadCaseDetails(caseRef) {
     helpCaseDetailMeta.textContent = `${activeCase.subject || 'No subject'} • ${activeCase.status || 'Unknown'} • ${activeCase.priority || 'Unknown priority'}`;
   }
   renderCaseComments(data.comments || []);
+}
+
+async function loadUserCases() {
+  const response = await fetch('/api/help/cases');
+  const data = await response.json();
+  if (!response.ok || data.error) {
+    throw new Error(data.error || 'Could not load cases.');
+  }
+  const cases = Array.isArray(data.cases) ? data.cases : [];
+  if (!helpCaseList) return cases;
+  helpCaseList.textContent = '';
+
+  if (cases.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'help-case-comment';
+    empty.textContent = 'No cases found for this user.';
+    helpCaseList.appendChild(empty);
+    return cases;
+  }
+
+  cases.forEach(caseItem => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'help-case-list-item';
+    btn.dataset.caseId = caseItem.id;
+
+    const title = document.createElement('strong');
+    title.textContent = `${caseItem.caseNumber || caseItem.id} - ${caseItem.subject || 'No subject'}`;
+    btn.appendChild(title);
+
+    const meta = document.createElement('span');
+    meta.textContent = `${caseItem.status || 'Unknown'} | ${caseItem.priority || 'Unknown priority'} | ${new Date(caseItem.createdDate).toLocaleDateString()}`;
+    btn.appendChild(meta);
+
+    btn.addEventListener('click', async () => {
+      try {
+        await loadCaseDetails(caseItem.id);
+        setHelpView('detail');
+      } catch (err) {
+        if (helpCaseLookupFeedback) helpCaseLookupFeedback.textContent = err.message;
+      }
+    });
+
+    helpCaseList.appendChild(btn);
+  });
+
+  return cases;
 }
 
 function openProfileMenu() {
@@ -792,9 +839,16 @@ if (helpLogTicketCta) {
 }
 
 if (helpCheckCaseCta) {
-  helpCheckCaseCta.addEventListener('click', () => {
+  helpCheckCaseCta.addEventListener('click', async () => {
     if (helpCaseLookupFeedback) helpCaseLookupFeedback.textContent = '';
     setHelpView('lookup');
+    try {
+      if (helpCaseLookupFeedback) helpCaseLookupFeedback.textContent = 'Loading your cases...';
+      await loadUserCases();
+      if (helpCaseLookupFeedback) helpCaseLookupFeedback.textContent = '';
+    } catch (err) {
+      if (helpCaseLookupFeedback) helpCaseLookupFeedback.textContent = err.message;
+    }
   });
 }
 
@@ -841,19 +895,12 @@ if (helpCaseForm) {
   });
 }
 
-if (helpCaseLookupBtn) {
-  helpCaseLookupBtn.addEventListener('click', async () => {
-    if (!helpCaseLookupInput) return;
-    const caseRef = helpCaseLookupInput.value.trim();
-    if (!caseRef) {
-      if (helpCaseLookupFeedback) helpCaseLookupFeedback.textContent = 'Enter a case number or id.';
-      return;
-    }
-    if (helpCaseLookupFeedback) helpCaseLookupFeedback.textContent = 'Loading case...';
+if (helpCaseRefreshBtn) {
+  helpCaseRefreshBtn.addEventListener('click', async () => {
+    if (helpCaseLookupFeedback) helpCaseLookupFeedback.textContent = 'Refreshing case list...';
     try {
-      await loadCaseDetails(caseRef);
+      await loadUserCases();
       if (helpCaseLookupFeedback) helpCaseLookupFeedback.textContent = '';
-      setHelpView('detail');
     } catch (err) {
       if (helpCaseLookupFeedback) helpCaseLookupFeedback.textContent = err.message;
     }

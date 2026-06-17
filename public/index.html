@@ -280,14 +280,12 @@
         <div class="help-case-lookup-view" id="helpCaseLookupView" hidden>
           <div class="help-subview-header">
             <button class="help-subview-back" id="helpCaseLookupBackBtn" type="button">‹ Back</button>
-            <strong>Find your case</strong>
+            <strong>Your cases</strong>
           </div>
           <div class="help-case-form">
-            <label>Case number or ID
-              <input id="helpCaseLookupInput" type="text" placeholder="e.g. 00012345 or 500...">
-            </label>
-            <button class="help-primary-btn" id="helpCaseLookupBtn" type="button">Open case</button>
+            <button class="help-primary-btn" id="helpCaseRefreshBtn" type="button">Refresh case list</button>
             <p class="help-form-feedback" id="helpCaseLookupFeedback"></p>
+            <div class="help-case-list" id="helpCaseList"></div>
           </div>
         </div>
         <div class="help-case-detail-view" id="helpCaseDetailView" hidden>

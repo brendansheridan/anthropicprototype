@@ -537,6 +537,39 @@ html, body {
   gap: 8px;
 }
 
+.help-case-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.help-case-list-item {
+  width: 100%;
+  border: 1px solid #dce0e8;
+  border-radius: 12px;
+  background: #fff;
+  padding: 10px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.help-case-list-item:hover {
+  background: #f7f9fc;
+}
+
+.help-case-list-item strong {
+  display: block;
+  color: #2d3340;
+  font-size: 12px;
+}
+
+.help-case-list-item span {
+  display: block;
+  margin-top: 4px;
+  color: #606876;
+  font-size: 11px;
+}
+
 .help-case-comment {
   background: #fff;
   border: 1px solid #dce0e8;

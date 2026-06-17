@@ -142,6 +142,29 @@ async function getCaseByReference(caseRef) {
   };
 }
 
+async function getCasesByContactId(contactId) {
+  const safeContactId = String(contactId || '').trim().replace(/'/g, "\\'");
+  if (!safeContactId) {
+    throw new Error('contactId is required.');
+  }
+
+  const soql = [
+    'SELECT Id,CaseNumber,Subject,Status,Priority,CreatedDate',
+    `FROM Case WHERE ContactId='${safeContactId}'`,
+    'ORDER BY CreatedDate DESC LIMIT 100'
+  ].join(' ');
+
+  const records = await queryRecords(soql);
+  return records.map(row => ({
+    id: row.Id,
+    caseNumber: row.CaseNumber,
+    subject: row.Subject,
+    status: row.Status,
+    priority: row.Priority,
+    createdDate: row.CreatedDate
+  }));
+}
+
 async function getCaseComments(caseId) {
   const safeCaseId = String(caseId || '').replace(/'/g, "\\'");
   const soql = [
@@ -383,6 +406,7 @@ module.exports = {
   queryContact,
   updateContact,
   getCaseByReference,
+  getCasesByContactId,
   getCaseComments,
   addCaseComment,
   uploadCaseFile,
