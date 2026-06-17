@@ -516,15 +516,48 @@ async function loadCaseDetails(caseRef) {
   }
   if (helpCaseDetailMeta) {
     const createdLabel = activeCase.createdDate ? new Date(activeCase.createdDate).toLocaleString() : 'Unknown';
-    helpCaseDetailMeta.textContent = [
-      `Subject: ${activeCase.subject || 'No subject'}`,
-      `Type: ${activeCase.type || 'Not set'}`,
-      `Status: ${activeCase.status || 'Unknown'}`,
-      `Priority: ${activeCase.priority || 'Unknown'}`,
-      `Origin: ${activeCase.origin || 'Unknown'}`,
-      `Created: ${createdLabel}`,
-      `Description: ${activeCase.description || 'No description provided.'}`
-    ].join('\n');
+    const fieldRows = [
+      { label: 'Subject', value: activeCase.subject || 'No subject' },
+      { label: 'Type', value: activeCase.type || 'Not set' },
+      { label: 'Status', value: activeCase.status || 'Unknown' },
+      { label: 'Priority', value: activeCase.priority || 'Unknown' },
+      { label: 'Origin', value: activeCase.origin || 'Unknown' },
+      { label: 'Created', value: createdLabel }
+    ];
+
+    helpCaseDetailMeta.textContent = '';
+    const grid = document.createElement('div');
+    grid.className = 'help-case-meta-grid';
+    fieldRows.forEach(row => {
+      const item = document.createElement('div');
+      item.className = 'help-case-meta-item';
+
+      const key = document.createElement('span');
+      key.className = 'help-case-meta-key';
+      key.textContent = row.label;
+
+      const val = document.createElement('span');
+      val.className = 'help-case-meta-value';
+      val.textContent = row.value;
+
+      item.appendChild(key);
+      item.appendChild(val);
+      grid.appendChild(item);
+    });
+
+    const desc = document.createElement('div');
+    desc.className = 'help-case-description-card';
+    const descKey = document.createElement('span');
+    descKey.className = 'help-case-meta-key';
+    descKey.textContent = 'Description';
+    const descVal = document.createElement('span');
+    descVal.className = 'help-case-meta-value';
+    descVal.textContent = activeCase.description || 'No description provided.';
+    desc.appendChild(descKey);
+    desc.appendChild(descVal);
+
+    helpCaseDetailMeta.appendChild(grid);
+    helpCaseDetailMeta.appendChild(desc);
   }
   renderCaseComments(data.comments || []);
 }
