@@ -353,6 +353,14 @@ function setHelpView(mode) {
   views.forEach(view => {
     if (!view.el) return;
     view.el.hidden = view.key !== mode;
+    if (view.key === mode) {
+      view.el.classList.remove('help-view-enter');
+      // Force reflow so animation can replay on repeated navigation.
+      void view.el.offsetWidth;
+      view.el.classList.add('help-view-enter');
+    } else {
+      view.el.classList.remove('help-view-enter');
+    }
   });
 }
 

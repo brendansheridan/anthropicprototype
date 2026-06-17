@@ -468,6 +468,19 @@ html, body {
   background: #f8f8f9;
 }
 
+.help-home-view,
+.help-thread-view,
+.help-article-view,
+.help-case-view,
+.help-case-lookup-view,
+.help-case-detail-view {
+  animation: helpViewFadeIn 0.18s ease;
+}
+
+.help-view-enter {
+  animation: helpViewFadeIn 0.18s ease;
+}
+
 .help-home-view[hidden],
 .help-thread-view[hidden],
 .help-article-view[hidden],
@@ -476,6 +489,17 @@ html, body {
 .help-case-detail-view[hidden],
 .help-volume-banner[hidden] {
   display: none !important;
+}
+
+@keyframes helpViewFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .help-article-content {
