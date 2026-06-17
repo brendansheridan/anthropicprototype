@@ -29,6 +29,7 @@ const helpInput = document.getElementById('helpInput');
 const helpSendBtn = document.getElementById('helpSendBtn');
 const helpStatusText = document.getElementById('helpStatusText');
 const helpHomeView = document.getElementById('helpHomeView');
+const helpArticleView = document.getElementById('helpArticleView');
 const helpCaseView = document.getElementById('helpCaseView');
 const helpCaseLookupView = document.getElementById('helpCaseLookupView');
 const helpCaseDetailView = document.getElementById('helpCaseDetailView');
@@ -37,6 +38,7 @@ const helpSendMessageCta = document.getElementById('helpSendMessageCta');
 const helpLogTicketCta = document.getElementById('helpLogTicketCta');
 const helpCheckCaseCta = document.getElementById('helpCheckCaseCta');
 const helpCaseBackBtn = document.getElementById('helpCaseBackBtn');
+const helpArticleBackBtn = document.getElementById('helpArticleBackBtn');
 const helpCaseLookupBackBtn = document.getElementById('helpCaseLookupBackBtn');
 const helpCaseDetailBackBtn = document.getElementById('helpCaseDetailBackBtn');
 const helpCaseForm = document.getElementById('helpCaseForm');
@@ -58,6 +60,9 @@ const helpCaseDetailFeedback = document.getElementById('helpCaseDetailFeedback')
 const helpVolumeBanner = document.getElementById('helpVolumeBanner');
 const helpKnowledgeSearchInput = document.getElementById('helpKnowledgeSearchInput');
 const helpKnowledgeResults = document.getElementById('helpKnowledgeResults');
+const helpArticleTitle = document.getElementById('helpArticleTitle');
+const helpArticleMeta = document.getElementById('helpArticleMeta');
+const helpArticleBody = document.getElementById('helpArticleBody');
 
 let conversationHistory = [];
 let isWaiting = false;
@@ -339,6 +344,7 @@ function setHelpStatus(text) {
 function setHelpView(mode) {
   const views = [
     { key: 'home', el: helpHomeView },
+    { key: 'article', el: helpArticleView },
     { key: 'case', el: helpCaseView },
     { key: 'lookup', el: helpCaseLookupView },
     { key: 'detail', el: helpCaseDetailView },
@@ -348,6 +354,23 @@ function setHelpView(mode) {
     if (!view.el) return;
     view.el.hidden = view.key !== mode;
   });
+}
+
+function openKnowledgeArticle(article) {
+  if (!article) return;
+  if (helpArticleTitle) {
+    helpArticleTitle.textContent = article.title || 'Help article';
+  }
+  if (helpArticleBody) {
+    helpArticleBody.textContent = article.summary || 'Article preview is not available for this entry yet.';
+  }
+  if (helpArticleMeta) {
+    const stamp = article.lastPublishedDate
+      ? `Updated ${new Date(article.lastPublishedDate).toLocaleString()}`
+      : '';
+    helpArticleMeta.textContent = stamp;
+  }
+  setHelpView('article');
 }
 
 function setHighVolumeBannerVisible(visible) {
@@ -460,6 +483,7 @@ function renderKnowledgeResults(articles) {
     row.className = 'help-home-link';
     row.textContent = article.title || 'Untitled article';
     row.title = article.summary || '';
+    row.addEventListener('click', () => openKnowledgeArticle(article));
     helpKnowledgeResults.appendChild(row);
   });
 }
@@ -893,6 +917,10 @@ if (helpLogTicketCta) {
     if (helpCaseFeedback) helpCaseFeedback.textContent = '';
     setHelpView('case');
   });
+}
+
+if (helpArticleBackBtn) {
+  helpArticleBackBtn.addEventListener('click', () => setHelpView('home'));
 }
 
 if (helpCheckCaseCta) {
