@@ -39,6 +39,7 @@ const helpLogTicketCta = document.getElementById('helpLogTicketCta');
 const helpCheckCaseCta = document.getElementById('helpCheckCaseCta');
 const helpCaseBackBtn = document.getElementById('helpCaseBackBtn');
 const helpArticleBackBtn = document.getElementById('helpArticleBackBtn');
+const helpArticleExpandBtn = document.getElementById('helpArticleExpandBtn');
 const helpCaseLookupBackBtn = document.getElementById('helpCaseLookupBackBtn');
 const helpCaseDetailBackBtn = document.getElementById('helpCaseDetailBackBtn');
 const helpCaseForm = document.getElementById('helpCaseForm');
@@ -76,6 +77,7 @@ let isProfileMenuOpen = false;
 let activeCase = null;
 let hasSentHelpMessage = false;
 let helpKnowledgeSearchDebounce = null;
+let isHelpArticleExpanded = false;
 const helpRenderedIds = new Set();
 const pendingUserMessages = [];
 
@@ -362,6 +364,25 @@ function setHelpView(mode) {
       view.el.classList.remove('help-view-enter');
     }
   });
+
+  if (helpArticleExpandBtn) {
+    helpArticleExpandBtn.hidden = mode !== 'article';
+  }
+  if (mode !== 'article') {
+    setHelpArticleExpanded(false);
+  }
+}
+
+function setHelpArticleExpanded(expanded) {
+  isHelpArticleExpanded = !!expanded;
+  if (helpDrawer) {
+    helpDrawer.classList.toggle('expanded', isHelpArticleExpanded);
+  }
+  if (helpArticleExpandBtn) {
+    helpArticleExpandBtn.textContent = isHelpArticleExpanded ? '→' : '←';
+    helpArticleExpandBtn.title = isHelpArticleExpanded ? 'Collapse article panel' : 'Expand article panel';
+    helpArticleExpandBtn.setAttribute('aria-label', helpArticleExpandBtn.title);
+  }
 }
 
 function openKnowledgeArticle(article) {
@@ -849,11 +870,13 @@ function closeHelpDrawer() {
   setHelpView('home');
   if (helpDrawer) {
     helpDrawer.classList.remove('open');
+    helpDrawer.classList.remove('expanded');
     helpDrawer.setAttribute('aria-hidden', 'true');
   }
   if (helpLauncherBtn) helpLauncherBtn.classList.remove('active');
   setHelpButtonState('Open Salesforce Help chat', false);
   stopHelpPolling();
+  setHelpArticleExpanded(false);
 }
 
 async function openHelpDrawer() {
@@ -997,6 +1020,12 @@ if (helpLogTicketCta) {
 
 if (helpArticleBackBtn) {
   helpArticleBackBtn.addEventListener('click', () => setHelpView('home'));
+}
+
+if (helpArticleExpandBtn) {
+  helpArticleExpandBtn.addEventListener('click', () => {
+    setHelpArticleExpanded(!isHelpArticleExpanded);
+  });
 }
 
 if (helpCheckCaseCta) {
