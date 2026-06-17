@@ -368,6 +368,9 @@ function setHelpView(mode) {
   if (helpArticleExpandBtn) {
     helpArticleExpandBtn.hidden = mode !== 'article';
   }
+  if (helpDrawer) {
+    helpDrawer.classList.toggle('article-mode', mode === 'article');
+  }
   if (mode !== 'article') {
     setHelpArticleExpanded(false);
   }
