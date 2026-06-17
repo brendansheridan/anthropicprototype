@@ -154,6 +154,29 @@ html, body {
   border-bottom: 1px solid var(--border);
 }
 
+.help-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.help-end-btn {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: 999px;
+  font-size: 11px;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.help-end-btn:hover {
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border-color: #4a4a4a;
+}
+
 .help-title-group {
   display: flex;
   flex-direction: column;

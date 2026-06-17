@@ -150,6 +150,20 @@ app.post('/api/messaging/messages', async (req, res) => {
   }
 });
 
+app.post('/api/messaging/end', async (req, res) => {
+  try {
+    const { accessToken, conversationId } = req.body || {};
+    if (!accessToken || !conversationId) {
+      return res.status(400).json({ error: 'accessToken and conversationId are required.' });
+    }
+    const result = await sf.endMessagingSession({ accessToken, conversationId });
+    res.json(result);
+  } catch (err) {
+    console.error('Messaging end error:', err.message);
+    res.status(500).json({ error: 'Unable to end messaging session.' });
+  }
+});
+
 // Concierge page
 app.get('/concierge', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'concierge', 'index.html'));

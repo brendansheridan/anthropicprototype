@@ -245,6 +245,32 @@ async function getMessagingMessages({ accessToken, conversationId }) {
   return parsed;
 }
 
+async function endMessagingSession({ accessToken, conversationId }) {
+  const host = getMessagingHost();
+  const developerName = process.env.SF_MESSAGING_DEPLOYMENT_NAME;
+
+  if (!accessToken || !conversationId || !developerName) {
+    throw new Error('Missing end-session payload.');
+  }
+
+  const response = await fetch(
+    `https://${host}/iamessage/api/v2/conversation/${conversationId}?esDeveloperName=${encodeURIComponent(developerName)}`,
+    {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`
+      }
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Messaging end failed (${response.status}): ${error}`);
+  }
+
+  return { success: true };
+}
+
 module.exports = {
   createCase,
   createTask,
@@ -252,5 +278,6 @@ module.exports = {
   updateContact,
   initializeMessagingSession,
   sendMessagingMessage,
-  getMessagingMessages
+  getMessagingMessages,
+  endMessagingSession
 };

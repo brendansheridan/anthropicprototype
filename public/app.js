@@ -17,6 +17,7 @@ const newChatBtn = document.getElementById('newChatBtn');
 const helpLauncherBtn = document.getElementById('helpLauncherBtn');
 const helpDrawer = document.getElementById('helpDrawer');
 const helpCloseBtn = document.getElementById('helpCloseBtn');
+const helpEndBtn = document.getElementById('helpEndBtn');
 const helpMessages = document.getElementById('helpMessages');
 const helpInput = document.getElementById('helpInput');
 const helpSendBtn = document.getElementById('helpSendBtn');
@@ -411,6 +412,60 @@ function stopHelpPolling() {
   }
 }
 
+function resetHelpConversationState() {
+  helpSession = null;
+  helpRenderedIds.clear();
+  pendingUserMessages.length = 0;
+  if (helpMessages) {
+    helpMessages.textContent = '';
+  }
+  if (helpInput) {
+    helpInput.value = '';
+    helpInput.style.height = 'auto';
+  }
+  if (helpSendBtn) {
+    helpSendBtn.disabled = true;
+  }
+  setHelpStatus('Start a support conversation');
+}
+
+async function endHelpConversation() {
+  if (!helpSession || isHelpLoading) {
+    closeHelpDrawer();
+    return;
+  }
+
+  isHelpLoading = true;
+  setHelpButtonState('Ending conversation', true);
+  setHelpStatus('Ending conversation...');
+  if (helpEndBtn) helpEndBtn.disabled = true;
+
+  try {
+    const response = await fetch('/api/messaging/end', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        accessToken: helpSession.accessToken,
+        conversationId: helpSession.conversationId
+      })
+    });
+    const data = await response.json();
+    if (!response.ok || data.error) {
+      throw new Error(data.error || 'Failed to end conversation.');
+    }
+  } catch (err) {
+    console.error('Help end conversation failed:', err);
+    setHelpStatus('Could not end conversation cleanly');
+  } finally {
+    stopHelpPolling();
+    resetHelpConversationState();
+    closeHelpDrawer();
+    if (helpEndBtn) helpEndBtn.disabled = false;
+    isHelpLoading = false;
+    setHelpButtonState('Open Salesforce Help chat', false);
+  }
+}
+
 function closeHelpDrawer() {
   isHelpOpen = false;
   if (helpDrawer) {
@@ -437,6 +492,7 @@ async function openHelpDrawer() {
     appendHelpEntry('agent', 'You are connected. How can we help today?');
   }
   await fetchHelpMessages();
+  if (helpEndBtn) helpEndBtn.disabled = false;
   startHelpPolling();
 }
 
@@ -469,6 +525,10 @@ if (helpLauncherBtn) {
 
 if (helpCloseBtn) {
   helpCloseBtn.addEventListener('click', closeHelpDrawer);
+}
+
+if (helpEndBtn) {
+  helpEndBtn.addEventListener('click', endHelpConversation);
 }
 
 if (helpInput && helpSendBtn) {
