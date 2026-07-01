@@ -346,6 +346,36 @@
     </main>
   </div>
 
+  <!-- Help channel chooser (Claudia vs Fin Agent) -->
+  <div class="help-chooser-overlay" id="helpChooserOverlay" aria-hidden="true">
+    <div class="help-chooser" role="dialog" aria-modal="true" aria-labelledby="helpChooserTitle">
+      <div class="help-chooser-header">
+        <strong id="helpChooserTitle">Get Help</strong>
+        <button class="help-chooser-close" id="helpChooserClose" type="button" aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <p class="help-chooser-subtitle">Choose who you'd like to chat with.</p>
+      <button class="help-chooser-option" id="chooseClaudia" type="button">
+        <img src="https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/anthropic.png" alt="Claudia" width="32" height="32">
+        <span class="help-chooser-option-text">
+          <strong>Claudia</strong>
+          <span>Agentforce support agent</span>
+        </span>
+        <span class="help-chooser-arrow">›</span>
+      </button>
+      <button class="help-chooser-option" id="chooseFin" type="button">
+        <img src="https://static.intercomassets.com/assets/fin/fin-avatar-8d1f0d1b0e4b7b0c7e0b3b3b3b3b3b3b.png" alt="Fin" width="32" height="32" onerror="this.src='https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/intercom.png'">
+        <span class="help-chooser-option-text">
+          <strong>Fin Agent</strong>
+          <span>Intercom AI agent</span>
+        </span>
+        <span class="help-chooser-arrow">›</span>
+      </button>
+    </div>
+  </div>
+
   <script src="app.js"></script>
+  <script src="help-chooser.js"></script>
 </body>
 </html>

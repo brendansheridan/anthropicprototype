@@ -1500,3 +1500,101 @@ textarea::placeholder {
   border-color: #cfeefe;
   color: #083344;
 }
+
+/* Help channel chooser (Claudia vs Fin Agent) */
+.help-chooser-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+.help-chooser-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+.help-chooser {
+  width: 380px;
+  max-width: calc(100vw - 32px);
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
+  padding: 20px;
+  transform: translateY(8px) scale(0.98);
+  transition: transform 0.15s ease;
+}
+.help-chooser-overlay.open .help-chooser {
+  transform: translateY(0) scale(1);
+}
+.help-chooser-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.help-chooser-header strong {
+  font-size: 18px;
+  color: #1a1a1a;
+}
+.help-chooser-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 4px;
+  border-radius: 6px;
+  display: inline-flex;
+}
+.help-chooser-close:hover {
+  background: #f3f4f6;
+}
+.help-chooser-subtitle {
+  margin: 0 0 16px;
+  color: #6b7280;
+  font-size: 14px;
+}
+.help-chooser-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px;
+  margin-bottom: 10px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+}
+.help-chooser-option:hover {
+  border-color: #c96442;
+  background: #fdf6f3;
+  transform: translateY(-1px);
+}
+.help-chooser-option img {
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+.help-chooser-option-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.help-chooser-option-text strong {
+  font-size: 15px;
+  color: #1a1a1a;
+}
+.help-chooser-option-text span {
+  font-size: 13px;
+  color: #6b7280;
+}
+.help-chooser-arrow {
+  color: #9ca3af;
+  font-size: 20px;
+}
